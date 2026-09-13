@@ -1,150 +1,128 @@
 /**
- * General Unlocking - Enterprise i18n Engine (v5.0)
- * Arquiteto: Sênior Full-Stack / Especialista DOM & UX
+ * General Unlocking - Enterprise i18n Engine (v6.0)
+ * Arquiteto: Sênior Full-Stack / Especialista DOM & UX (Motor de Substring Dinâmico)
  */
 (function () {
     'use strict';
 
-    // Dicionário Abrangente (Painel + Menus + Status + Termos Comuns)
-    const rawDictionary = {
-        // Navegação e Topo / Menus Principais
-        "Dashboard": "Painel",
-        "Order History": "Histórico de Pedidos",
-        "Statement": "Extrato",
-        "Invoice": "Fatura",
-        "Add Balance": "Adicionar Saldo",
-        "Logout": "Sair",
-        "Home": "Início",
-        "Company": "Empresa",
-        "About Us": "Sobre Nós",
-        "Contact Us": "Fale Conosco",
-        "Reseller Panel": "Painel de Revendedor",
-        "Free IMEI Checker": "Consulta IMEI Grátis",
-        "Quick Access": "Acesso Rápido",
-        "Services": "Serviços",
-        "Place Order": "Fazer Pedido",
-        "Mass Order": "Pedido em Massa",
-        "API": "API",
-        "Tickets": "Tickets",
-        "Add Funds": "Adicionar Fundos",
-        "Settings": "Configurações",
-        "Profile": "Perfil",
-        
-        // Listas e Filtros
-        "IMEI Service List": "Lista de Serviços IMEI",
-        "Server Service List": "Lista de Serviços de Servidor",
-        "Remote Service": "Serviço Remoto",
-        "Service by Group": "Serviços por Grupo",
-        "Best Selling": "Mais Vendidos",
-        "Search": "Pesquisar",
-        "Search Service": "Pesquisar Serviço",
-        "Status": "Status",
-        "Price": "Preço",
-        "Action": "Ação",
-        "Submit": "Enviar",
-        "Cancel": "Cancelar",
-        "Service": "Serviço",
-        "Description": "Descrição",
-        "Type": "Tipo",
-        "Tools": "Ferramentas",
-        "Total": "Total",
-        "Quantity": "Quantidade",
-        "View All": "Ver Todos",
-        "ID": "ID",
-        "Time": "Prazo",
-        "Average Time": "Tempo Médio",
-
-        // Painel Financeiro e Métricas
-        "Available Balance": "Saldo Disponível",
-        "Locked Balance": "Saldo Bloqueado",
-        "Total Receipts": "Total de Recebimentos",
-        "Waiting Action": "Aguardando Ação",
-        "In Process": "Em Processamento",
-        "Sucesso": "Sucesso",
-        "Success": "Sucesso",
-        "Error": "Erro",
-        "Pending": "Pendente",
-        "Processing": "Processando",
-        "Completed": "Concluído",
-        "Rejected": "Rejeitado",
-        "Total Orders Placed": "Total de Pedidos Realizados",
-        "Order": "Pedido",
-        "Orders": "Pedidos",
-        "Fatura": "Fatura",
-        "Extrato": "Extrato",
-        "Balance Deposit": "Depósito de Saldo",
-        "Paid": "Pago",
-        "Debit": "Débito",
-
-        // Prazos e Status de Entrega
-        "Instant": "Instantâneo",
-        "Instantâneo": "Instantâneo",
-        "Minutes": "Minutos",
-        "Miniutes": "Minutos",
-        "Instant Minutes": "Instantâneo",
-        "Instant Miniutes": "Instantâneo",
-        "days": "dias",
-        "Hours": "Horas",
-
-        // Alertas e Regras de Operadoras
-        "No Refund": "Sem Reembolso",
-        "Wrong Carrier No Refund": "Operadora Incorreta Sem Reembolso",
-        "Wrong Carrier Or Model No Refund": "Operadora ou Modelo Incorreto Sem Reembolso",
-        "Clean IMEI": "IMEI Limpo",
-        "New User": "Novo Usuário",
-        "Existing User": "Usuário Existente",
-
-        // Termos comuns em descrições de serviços e ferramentas
-        "Activation": "Ativação",
-        "Renewal": "Renovação",
-        "Credits": "Créditos",
-        "Credits Pack": "Pacote de Créditos",
-        "Direct": "Direto",
-        "Without Extra Pack": "Sem Pacote Extra",
-        "Any Quantity": "Qualquer Quantidade",
-        "Must be Registration After Order": "Deve ser registrado após o pedido",
-        "Before order, must be login": "Antes do pedido, deve fazer login",
-
-        // Módulos e Documentação API
-        "Recource": "Recurso",
-        "Dhru Fusion API Module": "Módulo API Dhru Fusion",
-        "Auto Update Price": "Atualização Automática de Preços",
-        "Order Send & Get": "Enviar e Receber Pedidos",
-        "Note: This module is only for Dhru Fusion": "Nota: Este módulo é apenas para Dhru Fusion",
-        "GSM Theme Client API Documentation": "Documentação da API do Cliente GSM Theme",
-        "Building a custom unlocking platform?": "Construindo uma plataforma de desbloqueio personalizada?",
-        "This documentation is for you.": "Esta documentação é para você.",
-        "GSM Theme Compatible API Documentation": "Documentação da API Compatível com GSM Theme",
-        "Creating a tools website with order integration?": "Criando um site de ferramentas com integração de pedidos?",
-
-        // Rodapé e Marketing
-        "Quick Delivery": "Entrega Rápida",
-        "Results within minutes": "Resultados em minutos",
-        "100% Secure": "100% Seguro",
-        "SSL encrypted platform": "Plataforma criptografada SSL",
-        "24/7 Support": "Suporte 24/7",
-        "Always here to help you": "Sempre aqui para ajudar",
-        "Easy Recharge": "Recarga Fácil",
-        "Binance, Tether, Visa & more": "Binance, Tether, Visa e mais",
-        "Legal": "Legal",
-        "Privacy Policy": "Política de Privacidade",
-        "Terms of Service": "Termos de Serviço",
-        "Delivery Policy": "Política de Entrega",
-        "Cancellation Policy": "Política de Cancelamento",
-        "Refund & Return Policy": "Política de Reembolso e Devolução",
-        "Get the App": "Baixe o App",
-        "Order, track & get support from your phone.": "Peça, acompanhe e obtenha suporte pelo celular.",
-        "Download on the": "Baixar na",
-        "Get it on": "Disponível no",
-        "App Store": "App Store",
-        "Google Play": "Google Play"
+    // 1. Dicionário de Termos Estáticos (Menus, Botões, Rodapé, Títulos)
+    const exactDictionary = {
+        "dashboard": "Painel",
+        "order history": "Histórico de Pedidos",
+        "statement": "Extrato",
+        "invoice": "Fatura",
+        "add balance": "Adicionar Saldo",
+        "logout": "Sair",
+        "home": "Início",
+        "company": "Empresa",
+        "about us": "Sobre Nós",
+        "contact us": "Fale Conosco",
+        "reseller panel": "Painel de Revendedor",
+        "free imei checker": "Consulta IMEI Grátis",
+        "quick access": "Acesso Rápido",
+        "services": "Serviços",
+        "place order": "Fazer Pedido",
+        "mass order": "Pedido em Massa",
+        "api": "API",
+        "tickets": "Tickets",
+        "add funds": "Adicionar Fundos",
+        "settings": "Configurações",
+        "profile": "Perfil",
+        "imei service list": "Lista de Serviços IMEI",
+        "server service list": "Lista de Serviços de Servidor",
+        "remote service": "Serviço Remoto",
+        "service by group": "Serviços por Grupo",
+        "best selling": "Mais Vendidos",
+        "search": "Pesquisar",
+        "search service": "Pesquisar Serviço",
+        "status": "Status",
+        "price": "Preço",
+        "action": "Ação",
+        "submit": "Enviar",
+        "cancel": "Cancelar",
+        "service": "Serviço",
+        "description": "Descrição",
+        "type": "Tipo",
+        "tools": "Ferramentas",
+        "total": "Total",
+        "quantity": "Quantidade",
+        "view all": "Ver Todos",
+        "id": "ID",
+        "time": "Prazo",
+        "average time": "Tempo Médio",
+        "available balance": "Saldo Disponível",
+        "locked balance": "Saldo Bloqueado",
+        "total receipts": "Total de Recebimentos",
+        "waiting action": "Aguardando Ação",
+        "in process": "Em Processamento",
+        "sucesso": "Sucesso",
+        "success": "Sucesso",
+        "error": "Erro",
+        "pending": "Pendente",
+        "processing": "Processando",
+        "completed": "Concluído",
+        "rejected": "Rejeitado",
+        "total orders placed": "Total de Pedidos Realizados",
+        "order": "Pedido",
+        "orders": "Pedidos",
+        "fatura": "Fatura",
+        "extrato": "Extrato",
+        "balance deposit": "Depósito de Saldo",
+        "paid": "Pago",
+        "debit": "Débito",
+        "quick delivery": "Entrega Rápida",
+        "results within minutes": "Resultados em minutos",
+        "100% secure": "100% Seguro",
+        "ssl encrypted platform": "Plataforma criptografada SSL",
+        "24/7 support": "Suporte 24/7",
+        "always here to help you": "Sempre aqui para ajudar",
+        "easy recharge": "Recarga Fácil",
+        "binance, tether, visa & more": "Binance, Tether, Visa e mais",
+        "legal": "Legal",
+        "privacy policy": "Política de Privacidade",
+        "terms of service": "Termos de Serviço",
+        "delivery policy": "Política de Entrega",
+        "cancellation policy": "Política de Cancelamento",
+        "refund & return policy": "Política de Reembolso e Devolução",
+        "get the app": "Baixe o App",
+        "order, track & get support from your phone.": "Peça, acompanhe e obtenha suporte pelo celular.",
+        "download on the": "Baixar na",
+        "get it on": "Disponível no",
+        "app store": "App Store",
+        "google play": "Google Play"
     };
 
-    // Indexa em lowercase para busca insensible a maiúsculas/minúsculas
-    const dictionary = {};
-    for (const key in rawDictionary) {
-        dictionary[key.toLowerCase().trim()] = rawDictionary[key];
-    }
+    // 2. Dicionário de Substituição Dinâmica (Termos técnicos dentro das linhas de serviços)
+    const keywordDictionary = [
+        { regex: /\bActivation\b/gi, replacement: "Ativação" },
+        { regex: /\bRenewal\b/gi, replacement: "Renovação" },
+        { regex: /\bRenew\b/gi, replacement: "Renovar" },
+        { regex: /\bExtand\b/gi, replacement: "Estender" },
+        { regex: /\bExtend\b/gi, replacement: "Estender" },
+        { regex: /\bCredits?\b/gi, replacement: "Créditos" },
+        { regex: /\bNew User\b/gi, replacement: "Novo Usuário" },
+        { regex: /\bExisting User\b/gi, replacement: "Usuário Existente" },
+        { regex: /\bMiniutes\b/gi, replacement: "Minutos" },
+        { regex: /\bMinutes\b/gi, replacement: "Minutos" },
+        { regex: /\bHours\b/gi, replacement: "Horas" },
+        { regex: /\bDays\b/gi, replacement: "Dias" },
+        { regex: /\bMonth\b/gi, replacement: "Mês" },
+        { regex: /\bMonths\b/gi, replacement: "Meses" },
+        { regex: /\bYear\b/gi, replacement: "Ano" },
+        { regex: /\bYears\b/gi, replacement: "Anos" },
+        { regex: /\bInstantâneo\b/gi, replacement: "Instantâneo" },
+        { regex: /\bInstant\b/gi, replacement: "Instantâneo" },
+        { regex: /\bDirect\b/gi, replacement: "Direto" },
+        { regex: /\bWithout Extra Pack\b/gi, replacement: "Sem Pacote Extra" },
+        { regex: /\bExisting Account\b/gi, replacement: "Conta Existente" },
+        { regex: /\bLicense\b/gi, replacement: "Licença" },
+        { regex: /\bSubscription\b/gi, replacement: "Assinatura" },
+        { regex: /\bAny Quantity\b/gi, replacement: "Qualquer Quantidade" },
+        { regex: /\bMust be Registration After Order\b/gi, replacement: "Deve ser registrado após o pedido" },
+        { regex: /\bBefore order, must be login\b/gi, replacement: "Antes do pedido, deve fazer login" },
+        { regex: /\bNo Refund any issue\b/gi, replacement: "Sem reembolso para qualquer problema" },
+        { regex: /\bNo Refund\b/gi, replacement: "Sem Reembolso" }
+    ];
 
     class GUTranslator {
         constructor() {
@@ -161,25 +139,47 @@
             let trimmed = this.cleanText(originalText);
             let lowerTrimmed = trimmed.toLowerCase();
 
-            if (dictionary[lowerTrimmed]) {
+            // 1. Tenta correspondência exata para textos isolados (Menus, botões, labels)
+            if (exactDictionary[lowerTrimmed]) {
                 const leadingSpace = originalText.match(/^\s*/)[0];
                 const trailingSpace = originalText.match(/\s*$/)[0];
-                textNode.nodeValue = leadingSpace + dictionary[lowerTrimmed] + trailingSpace;
+                textNode.nodeValue = leadingSpace + exactDictionary[lowerTrimmed] + trailingSpace;
+                return;
+            }
+
+            // 2. Se não for exato, aplica o dicionário de palavras-chave (para serviços complexos)
+            let modifiedText = originalText;
+            let hasChanged = false;
+
+            keywordDictionary.forEach(item => {
+                if (item.regex.test(modifiedText)) {
+                    modifiedText = modifiedText.replace(item.regex, item.replacement);
+                    hasChanged = true;
+                }
+            });
+
+            if (hasChanged) {
+                textNode.nodeValue = modifiedText;
             }
         }
 
         translateElementAttributes(element) {
             if (!element.querySelectorAll) return;
             
-            // Atributos de input, placeholders e títulos
             const elements = element.querySelectorAll('[placeholder], [title], [alt], [value]');
             elements.forEach(el => {
                 ['placeholder', 'title', 'alt'].forEach(attr => {
                     const val = el.getAttribute(attr);
                     if (val) {
-                        const cleaned = this.cleanText(val).toLowerCase();
-                        if (dictionary[cleaned]) {
-                            el.setAttribute(attr, dictionary[cleaned]);
+                        let cleaned = this.cleanText(val).toLowerCase();
+                        if (exactDictionary[cleaned]) {
+                            el.setAttribute(attr, exactDictionary[cleaned]);
+                        } else {
+                            let modVal = val;
+                            keywordDictionary.forEach(item => {
+                                modVal = modVal.replace(item.regex, item.replacement);
+                            });
+                            if (modVal !== val) el.setAttribute(attr, modVal);
                         }
                     }
                 });
@@ -187,9 +187,9 @@
                 if (el.tagName === 'INPUT' && ['submit', 'button', 'reset'].includes(el.type)) {
                     const val = el.value;
                     if (val) {
-                        const cleaned = this.cleanText(val).toLowerCase();
-                        if (dictionary[cleaned]) {
-                            el.value = dictionary[cleaned];
+                        let cleaned = this.cleanText(val).toLowerCase();
+                        if (exactDictionary[cleaned]) {
+                            el.value = exactDictionary[cleaned];
                         }
                     }
                 }
@@ -199,7 +199,6 @@
         run(rootNode = document.body) {
             if (!rootNode) return;
 
-            // Varredura de nós de texto de alta performance
             const walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT, {
                 acceptNode: (n) => {
                     const parent = n.parentNode;
@@ -222,20 +221,18 @@
         }
 
         init() {
-            // Executa imediatamente no carregamento
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', () => this.run());
             } else {
                 this.run();
             }
 
-            // Intervalo de varredura ativa agressiva para apanhar dados injetados por AJAX tardio
-            const aggressiveIntervals = [100, 300, 600, 1200, 2500, 5000];
-            aggressiveIntervals.forEach(ms => {
+            // Intervalos agressivos para apanhar dados injetados via AJAX pelas APIs do painel
+            [100, 300, 600, 1200, 2500, 5000].forEach(ms => {
                 setTimeout(() => this.run(), ms);
             });
 
-            // MutationObserver inteligente e contínuo para qualquer mudança na árvore DOM
+            // MutationObserver contínuo para tabelas geradas dinamicamente
             const observer = new MutationObserver((mutations) => {
                 if (this.isTranslating) return;
                 
@@ -262,7 +259,7 @@
                 subtree: true
             });
 
-            console.info("[GU-Translator v5.0] Motor Híbrido Contínuo ativado. Listas e menus monitorados.");
+            console.info("[GU-Translator v6.0] Motor Inteligente de Substring Ativado.");
         }
     }
 
