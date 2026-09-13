@@ -23,7 +23,7 @@
         flags: {
             debugMode: true,      // Mostra logs no console
             themeNeon: true,      // Carrega o CSS Cyberpunk (em breve)
-            translator: false,    // Tradutor Global (em breve)
+            translator: true,    // Tradutor Global (agora ativo)
             globalSearch: false,  // Pesquisa avançada (em breve)
             uiFixes: false        // Correções de layout (em breve)
         },
