@@ -1,0 +1,89 @@
+/**
+ * GU-Core: Theme Neon (Cyberpunk / Dark GSM Professional)
+ * Baixo risco de conflito com Bootstrap / Seletores reais segmentados
+ */
+
+:root {
+    --gu-bg-dark: #0f111a;
+    --gu-bg-card: #151824;
+    --gu-bg-hover: #1e2235;
+    --gu-neon-green: #00ff66;
+    --gu-neon-cyan: #00e5ff;
+    --gu-text-main: #e2e8f0;
+    --gu-text-muted: #94a3b8;
+    --gu-border: #262d47;
+}
+
+/* Fundo geral do painel em tom escuro cyberpunk suave */
+body, .content-wrapper, .wrapper {
+    background-color: var(--gu-bg-dark) !important;
+    color: var(--gu-text-main) !important;
+}
+
+/* Painéis, Cards e Containers */
+.card, .box, .panel, .modal-content {
+    background-color: var(--gu-bg-card) !important;
+    border: 1px solid var(--gu-border) !important;
+    color: var(--gu-text-main) !important;
+    box-shadow: 0 4px 20px rgba(0, 255, 102, 0.03) !important;
+}
+
+/* Textos e Títulos */
+h1, h2, h3, h4, h5, h6, .card-title, .box-title {
+    color: var(--gu-text-main) !important;
+}
+
+/* Botões primários com toque Neon */
+.btn-primary, .btn-success {
+    background: linear-gradient(135deg, #00b050, var(--gu-neon-green)) !important;
+    border: none !important;
+    color: #000 !important;
+    font-weight: 600 !important;
+    box-shadow: 0 0 10px rgba(0, 255, 102, 0.2);
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover, .btn-success:hover {
+    box-shadow: 0 0 18px rgba(0, 255, 102, 0.5);
+    filter: brightness(1.1);
+}
+
+/* Tabelas do painel GSM */
+table.table, .table-responsive {
+    color: var(--gu-text-main) !important;
+}
+
+.table th, .table td {
+    border-color: var(--gu-border) !important;
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(255, 255, 102, 0.01) !important;
+}
+
+.table-hover tbody tr:hover {
+    background-color: var(--gu-bg-hover) !important;
+}
+
+/* Inputs, Textareas e Selects do painel */
+input.form-control, select.form-control, textarea.form-control {
+    background-color: #0b0d14 !important;
+    border: 1px solid var(--gu-border) !important;
+    color: var(--gu-text-main) !important;
+}
+
+input.form-control:focus, select.form-control:focus, textarea.form-control:focus {
+    border-color: var(--gu-neon-green) !important;
+    box-shadow: 0 0 8px rgba(0, 255, 102, 0.3) !important;
+}
+
+/* Links com detalhe em Cyan */
+a {
+    color: var(--gu-neon-cyan);
+    transition: color 0.2s;
+}
+
+a:hover {
+    color: var(--gu-neon-green);
+    text-shadow: 0 0 6px rgba(0, 255, 102, 0.4);
+}
