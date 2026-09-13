@@ -1,21 +1,101 @@
 /**
- * General Unlocking - Enterprise i18n Engine (v3.0)
+ * General Unlocking - Enterprise i18n Engine (v4.0)
  * Arquiteto: Sênior Full-Stack / Especialista DOM & UX
  */
 (function () {
     'use strict';
 
-    // Dicionário Expandido e Normalizado (Chaves em lowercase para match infalível)
+    // Dicionário Completo e Normalizado (Mapeamento de todo o painel e listas)
     const rawDictionary = {
+        // Navegação e Topo
         "Dashboard": "Painel",
         "Order History": "Histórico de Pedidos",
         "Statement": "Extrato",
         "Invoice": "Fatura",
         "Add Balance": "Adicionar Saldo",
         "Logout": "Sair",
+        "Home": "Início",
+        "Company": "Empresa",
+        "About Us": "Sobre Nós",
+        "Contact Us": "Fale Conosco",
+        "Reseller Panel": "Painel de Revendedor",
+        "Free IMEI Checker": "Consulta IMEI Grátis",
+        "Quick Access": "Acesso Rápido",
+        
+        // Listas e Serviços
         "IMEI Service List": "Lista de Serviços IMEI",
         "Server Service List": "Lista de Serviços de Servidor",
-        "Home": "Início",
+        "Remote Service": "Serviço Remoto",
+        "Service by Group": "Serviços por Grupo",
+        "Best Selling": "Mais Vendidos",
+        "Search": "Pesquisar",
+        "Status": "Status",
+        "Price": "Preço",
+        "Action": "Ação",
+        "Submit": "Enviar",
+        "Cancel": "Cancelar",
+        "Service": "Serviço",
+        "Description": "Descrição",
+        "Type": "Tipo",
+        "API": "API",
+        "Tools": "Ferramentas",
+        "Total": "Total",
+        "Quantity": "Quantidade",
+        "View All": "Ver Todos",
+        "Place Order": "Fazer Pedido",
+
+        // Painel Financeiro e Métricas
+        "Available Balance": "Saldo Disponível",
+        "Locked Balance": "Saldo Bloqueado",
+        "Total Receipts": "Total de Recebimentos",
+        "Waiting Action": "Aguardando Ação",
+        "In Process": "Em Processamento",
+        "Sucesso": "Sucesso",
+        "Success": "Sucesso",
+        "Error": "Erro",
+        "Pending": "Pendente",
+        "Processing": "Processando",
+        "Completed": "Concluído",
+        "Rejected": "Rejeitado",
+        "Total Orders Placed": "Total de Pedidos Realizados",
+        "Order": "Pedido",
+        "Orders": "Pedidos",
+        "Fatura": "Fatura",
+        "Extrato": "Extrato",
+        "Balance Deposit": "Depósito de Saldo",
+        "Paid": "Pago",
+        "Debit": "Débito",
+
+        // Prazos e Status de Entrega (Tratando variações e erros de digitação da API)
+        "Instant": "Instantâneo",
+        "Instantâneo": "Instantâneo",
+        "Minutes": "Minutos",
+        "Miniutes": "Minutos",
+        "Instant Miniutes": "Instantâneo / Minutos",
+        "days": "dias",
+        "Hours": "Horas",
+
+        // Alertas e Regras Comuns de Operadoras
+        "No Refund": "Sem Reembolso",
+        "Wrong Carrier No Refund": "Operadora Incorreta Sem Reembolso",
+        "Wrong Carrier Or Model No Refund": "Operadora ou Modelo Incorreto Sem Reembolso",
+        "Clean IMEI": "IMEI Limpo",
+        "New User": "Novo Usuário",
+        "Existing User": "Usuário Existente",
+
+        // Módulos e Documentação API
+        "Recource": "Recurso",
+        "Dhru Fusion API Module": "Módulo API Dhru Fusion",
+        "Auto Update Price": "Atualização Automática de Preços",
+        "Order Send & Get": "Enviar e Receber Pedidos",
+        "Note: This module is only for Dhru Fusion": "Nota: Este módulo é apenas para Dhru Fusion",
+        "GSM Theme Client API Documentation": "Documentação da API do Cliente GSM Theme",
+        "Building a custom unlocking platform?": "Construindo uma plataforma de desbloqueio personalizada?",
+        "This documentation is for you.": "Esta documentação é para você.",
+        "GSM Theme Compatible API Documentation": "Documentação da API Compatível com GSM Theme",
+        "Creating a tools website with order integration?": "Criando um site de ferramentas com integração de pedidos?",
+
+        // Rodapé e Marketing
         "Quick Delivery": "Entrega Rápida",
         "Results within minutes": "Resultados em minutos",
         "100% Secure": "100% Seguro",
@@ -24,15 +104,6 @@
         "Always here to help you": "Sempre aqui para ajudar",
         "Easy Recharge": "Recarga Fácil",
         "Binance, Tether, Visa & more": "Binance, Tether, Visa e mais",
-        "Company": "Empresa",
-        "About Us": "Sobre Nós",
-        "Contact Us": "Fale Conosco",
-        "Reseller Panel": "Painel de Revendedor",
-        "Free IMEI Checker": "Consulta IMEI Grátis",
-        "Quick Access": "Acesso Rápido",
-        "Remote Service": "Serviço Remoto",
-        "Service by Group": "Serviços por Grupo",
-        "Best Selling": "Mais Vendidos",
         "Legal": "Legal",
         "Privacy Policy": "Política de Privacidade",
         "Terms of Service": "Termos de Serviço",
@@ -44,42 +115,10 @@
         "Download on the": "Baixar na",
         "Get it on": "Disponível no",
         "App Store": "App Store",
-        "Google Play": "Google Play",
-        "Search": "Pesquisar",
-        "Status": "Status",
-        "Price": "Preço",
-        "Action": "Ação",
-        "Submit": "Enviar",
-        "Cancel": "Cancelar",
-        "Success": "Sucesso",
-        "Error": "Erro",
-        "Pending": "Pendente",
-        "Processing": "Processando",
-        "Completed": "Concluído",
-        "Rejected": "Rejeitado",
-        "Instant": "Instantâneo",
-        "Minutes": "Minutos",
-        "Miniutes": "Minutos",
-        "days": "dias",
-        "Hours": "Horas",
-        "New User": "Novo Usuário",
-        "Existing User": "Usuário Existente",
-        "No Refund": "Sem Reembolso",
-        "Wrong Carrier No Refund": "Operadora Incorreta Sem Reembolso",
-        "Clean IMEI": "IMEI Limpo",
-        // Adicionando variações comuns extras encontradas em painéis GSM padrão
-        "Place Order": "Fazer Pedido",
-        "View All": "Ver Todos",
-        "Total": "Total",
-        "Quantity": "Quantidade",
-        "Service": "Serviço",
-        "Description": "Descrição",
-        "Type": "Tipo",
-        "API": "API",
-        "Tools": "Ferramentas"
+        "Google Play": "Google Play"
     };
 
-    // Indexa o dicionário em lowercase para permitir busca case-insensitive perfeita
+    // Indexa o dicionário em lowercase para match infalível (Case-Insensitive)
     const dictionary = {};
     for (const key in rawDictionary) {
         dictionary[key.toLowerCase().trim()] = rawDictionary[key];
@@ -97,10 +136,9 @@
         translateNode(node) {
             if (!node || node.nodeType === Node.COMMENT_NODE) return;
 
-            // 1. Traduz nós de texto
+            // 1. Traduz nós de texto preservando tags HTML internas
             const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, {
                 acceptNode: (n) => {
-                    // Evita traduzir scripts, estilos ou campos de texto editáveis ativos
                     const parent = n.parentNode;
                     if (parent && ['SCRIPT', 'STYLE', 'TEXTAREA'].includes(parent.tagName)) {
                         return NodeFilter.FILTER_REJECT;
@@ -121,15 +159,11 @@
                 if (dictionary[lowerTrimmed]) {
                     const leadingSpace = originalText.match(/^\s*/)[0];
                     const trailingSpace = originalText.match(/\s*$/)[0];
-                    
-                    let translated = dictionary[lowerTrimmed];
-                    
-                    // Preserva a capitalização original se a palavra original estiver em Title Case ou ALL CAPS (opcional, mas seguro manter a tradução padrão mapeada)
-                    textNode.nodeValue = leadingSpace + translated + trailingSpace;
+                    textNode.nodeValue = leadingSpace + dictionary[lowerTrimmed] + trailingSpace;
                 }
             }
 
-            // 2. Traduz atributos interativos e informativos
+            // 2. Traduz atributos de inputs, placeholders e títulos
             const elements = node.querySelectorAll ? node.querySelectorAll('[placeholder], [title], [alt], [value]') : [];
             elements.forEach(el => {
                 ['placeholder', 'title', 'alt'].forEach(attr => {
@@ -142,7 +176,6 @@
                     }
                 });
                 
-                // Para inputs do tipo botão ou submit que usam o atributo value
                 if (el.tagName === 'INPUT' && ['submit', 'button', 'reset'].includes(el.type)) {
                     const val = el.value;
                     if (val) {
@@ -166,12 +199,12 @@
                 this.run();
             }
 
-            // Executa múltiplas vezes nos primeiros segundos para capturar renderizações pesadas de SDKs de painel
-            setTimeout(() => this.run(), 300);
-            setTimeout(() => this.run(), 1000);
-            setTimeout(() => this.run(), 2500);
+            // Múltiplos disparos para apanhar carregamentos assíncronos pesados do painel
+            setTimeout(() => this.run(), 200);
+            setTimeout(() => this.run(), 800);
+            setTimeout(() => this.run(), 2000);
 
-            // MutationObserver inteligente para AJAX e Single Page Apps (SPA)
+            // MutationObserver para tabelas geradas dinamicamente via AJAX / API
             const observer = new MutationObserver((mutations) => {
                 let shouldTranslate = false;
                 for (let mutation of mutations) {
@@ -197,7 +230,7 @@
                 subtree: true
             });
 
-            console.info("[GU-Translator v3.0] Motor de i18n blindado ativado com sucesso.");
+            console.info("[GU-Translator v4.0] Painel totalmente traduzido e monitorado com sucesso.");
         }
     }
 
