@@ -1,13 +1,13 @@
 /**
- * General Unlocking - Enterprise i18n Engine (v4.0)
+ * General Unlocking - Enterprise i18n Engine (v5.0)
  * Arquiteto: Sênior Full-Stack / Especialista DOM & UX
  */
 (function () {
     'use strict';
 
-    // Dicionário Completo e Normalizado (Mapeamento de todo o painel e listas)
+    // Dicionário Abrangente (Painel + Menus + Status + Termos Comuns)
     const rawDictionary = {
-        // Navegação e Topo
+        // Navegação e Topo / Menus Principais
         "Dashboard": "Painel",
         "Order History": "Histórico de Pedidos",
         "Statement": "Extrato",
@@ -21,14 +21,23 @@
         "Reseller Panel": "Painel de Revendedor",
         "Free IMEI Checker": "Consulta IMEI Grátis",
         "Quick Access": "Acesso Rápido",
+        "Services": "Serviços",
+        "Place Order": "Fazer Pedido",
+        "Mass Order": "Pedido em Massa",
+        "API": "API",
+        "Tickets": "Tickets",
+        "Add Funds": "Adicionar Fundos",
+        "Settings": "Configurações",
+        "Profile": "Perfil",
         
-        // Listas e Serviços
+        // Listas e Filtros
         "IMEI Service List": "Lista de Serviços IMEI",
         "Server Service List": "Lista de Serviços de Servidor",
         "Remote Service": "Serviço Remoto",
         "Service by Group": "Serviços por Grupo",
         "Best Selling": "Mais Vendidos",
         "Search": "Pesquisar",
+        "Search Service": "Pesquisar Serviço",
         "Status": "Status",
         "Price": "Preço",
         "Action": "Ação",
@@ -37,12 +46,13 @@
         "Service": "Serviço",
         "Description": "Descrição",
         "Type": "Tipo",
-        "API": "API",
         "Tools": "Ferramentas",
         "Total": "Total",
         "Quantity": "Quantidade",
         "View All": "Ver Todos",
-        "Place Order": "Fazer Pedido",
+        "ID": "ID",
+        "Time": "Prazo",
+        "Average Time": "Tempo Médio",
 
         // Painel Financeiro e Métricas
         "Available Balance": "Saldo Disponível",
@@ -66,22 +76,34 @@
         "Paid": "Pago",
         "Debit": "Débito",
 
-        // Prazos e Status de Entrega (Tratando variações e erros de digitação da API)
+        // Prazos e Status de Entrega
         "Instant": "Instantâneo",
         "Instantâneo": "Instantâneo",
         "Minutes": "Minutos",
         "Miniutes": "Minutos",
-        "Instant Miniutes": "Instantâneo / Minutos",
+        "Instant Minutes": "Instantâneo",
+        "Instant Miniutes": "Instantâneo",
         "days": "dias",
         "Hours": "Horas",
 
-        // Alertas e Regras Comuns de Operadoras
+        // Alertas e Regras de Operadoras
         "No Refund": "Sem Reembolso",
         "Wrong Carrier No Refund": "Operadora Incorreta Sem Reembolso",
         "Wrong Carrier Or Model No Refund": "Operadora ou Modelo Incorreto Sem Reembolso",
         "Clean IMEI": "IMEI Limpo",
         "New User": "Novo Usuário",
         "Existing User": "Usuário Existente",
+
+        // Termos comuns em descrições de serviços e ferramentas
+        "Activation": "Ativação",
+        "Renewal": "Renovação",
+        "Credits": "Créditos",
+        "Credits Pack": "Pacote de Créditos",
+        "Direct": "Direto",
+        "Without Extra Pack": "Sem Pacote Extra",
+        "Any Quantity": "Qualquer Quantidade",
+        "Must be Registration After Order": "Deve ser registrado após o pedido",
+        "Before order, must be login": "Antes do pedido, deve fazer login",
 
         // Módulos e Documentação API
         "Recource": "Recurso",
@@ -118,7 +140,7 @@
         "Google Play": "Google Play"
     };
 
-    // Indexa o dicionário em lowercase para match infalível (Case-Insensitive)
+    // Indexa em lowercase para busca insensible a maiúsculas/minúsculas
     const dictionary = {};
     for (const key in rawDictionary) {
         dictionary[key.toLowerCase().trim()] = rawDictionary[key];
@@ -126,6 +148,7 @@
 
     class GUTranslator {
         constructor() {
+            this.isTranslating = false;
             this.init();
         }
 
@@ -133,38 +156,23 @@
             return text ? text.replace(/\s+/g, ' ').trim() : '';
         }
 
-        translateNode(node) {
-            if (!node || node.nodeType === Node.COMMENT_NODE) return;
+        translateTextNode(textNode) {
+            let originalText = textNode.nodeValue;
+            let trimmed = this.cleanText(originalText);
+            let lowerTrimmed = trimmed.toLowerCase();
 
-            // 1. Traduz nós de texto preservando tags HTML internas
-            const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, {
-                acceptNode: (n) => {
-                    const parent = n.parentNode;
-                    if (parent && ['SCRIPT', 'STYLE', 'TEXTAREA'].includes(parent.tagName)) {
-                        return NodeFilter.FILTER_REJECT;
-                    }
-                    if (parent && parent.isContentEditable) {
-                        return NodeFilter.FILTER_REJECT;
-                    }
-                    return NodeFilter.FILTER_ACCEPT;
-                }
-            }, false);
-
-            let textNode;
-            while (textNode = walker.nextNode()) {
-                let originalText = textNode.nodeValue;
-                let trimmed = this.cleanText(originalText);
-                let lowerTrimmed = trimmed.toLowerCase();
-
-                if (dictionary[lowerTrimmed]) {
-                    const leadingSpace = originalText.match(/^\s*/)[0];
-                    const trailingSpace = originalText.match(/\s*$/)[0];
-                    textNode.nodeValue = leadingSpace + dictionary[lowerTrimmed] + trailingSpace;
-                }
+            if (dictionary[lowerTrimmed]) {
+                const leadingSpace = originalText.match(/^\s*/)[0];
+                const trailingSpace = originalText.match(/\s*$/)[0];
+                textNode.nodeValue = leadingSpace + dictionary[lowerTrimmed] + trailingSpace;
             }
+        }
 
-            // 2. Traduz atributos de inputs, placeholders e títulos
-            const elements = node.querySelectorAll ? node.querySelectorAll('[placeholder], [title], [alt], [value]') : [];
+        translateElementAttributes(element) {
+            if (!element.querySelectorAll) return;
+            
+            // Atributos de input, placeholders e títulos
+            const elements = element.querySelectorAll('[placeholder], [title], [alt], [value]');
             elements.forEach(el => {
                 ['placeholder', 'title', 'alt'].forEach(attr => {
                     const val = el.getAttribute(attr);
@@ -188,40 +196,64 @@
             });
         }
 
-        run() {
-            this.translateNode(document.body);
+        run(rootNode = document.body) {
+            if (!rootNode) return;
+
+            // Varredura de nós de texto de alta performance
+            const walker = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT, {
+                acceptNode: (n) => {
+                    const parent = n.parentNode;
+                    if (parent && ['SCRIPT', 'STYLE', 'TEXTAREA', 'CODE', 'PRE'].includes(parent.tagName)) {
+                        return NodeFilter.FILTER_REJECT;
+                    }
+                    if (parent && parent.isContentEditable) {
+                        return NodeFilter.FILTER_REJECT;
+                    }
+                    return NodeFilter.FILTER_ACCEPT;
+                }
+            }, false);
+
+            let textNode;
+            while (textNode = walker.nextNode()) {
+                this.translateTextNode(textNode);
+            }
+
+            this.translateElementAttributes(rootNode);
         }
 
         init() {
+            // Executa imediatamente no carregamento
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', () => this.run());
             } else {
                 this.run();
             }
 
-            // Múltiplos disparos para apanhar carregamentos assíncronos pesados do painel
-            setTimeout(() => this.run(), 200);
-            setTimeout(() => this.run(), 800);
-            setTimeout(() => this.run(), 2000);
+            // Intervalo de varredura ativa agressiva para apanhar dados injetados por AJAX tardio
+            const aggressiveIntervals = [100, 300, 600, 1200, 2500, 5000];
+            aggressiveIntervals.forEach(ms => {
+                setTimeout(() => this.run(), ms);
+            });
 
-            // MutationObserver para tabelas geradas dinamicamente via AJAX / API
+            // MutationObserver inteligente e contínuo para qualquer mudança na árvore DOM
             const observer = new MutationObserver((mutations) => {
-                let shouldTranslate = false;
+                if (this.isTranslating) return;
+                
+                let hasNewNodes = false;
                 for (let mutation of mutations) {
                     if (mutation.addedNodes.length > 0) {
-                        for (let node of mutation.addedNodes) {
-                            if (node.nodeType === Node.ELEMENT_NODE) {
-                                shouldTranslate = true;
-                                break;
-                            }
-                        }
+                        hasNewNodes = true;
+                        break;
                     }
-                    if (shouldTranslate) break;
                 }
 
-                if (shouldTranslate) {
+                if (hasNewNodes) {
+                    this.isTranslating = true;
                     clearTimeout(this.debounceTimer);
-                    this.debounceTimer = setTimeout(() => this.run(), 100);
+                    this.debounceTimer = setTimeout(() => {
+                        this.run();
+                        this.isTranslating = false;
+                    }, 150);
                 }
             });
 
@@ -230,7 +262,7 @@
                 subtree: true
             });
 
-            console.info("[GU-Translator v4.0] Painel totalmente traduzido e monitorado com sucesso.");
+            console.info("[GU-Translator v5.0] Motor Híbrido Contínuo ativado. Listas e menus monitorados.");
         }
     }
 
