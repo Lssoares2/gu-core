@@ -1,125 +1,153 @@
 /**
- * GU-Core: Módulo Tradutor Global (PT-BR)
- * Utiliza TreeWalker para varrer TextNodes de forma segura sem quebrar o layout,
- * preços, inputs ou tags protegidas.
+ * General Unlocking - Enterprise i18n Engine (v2.0)
+ * Arquiteto: Sênior Full-Stack / Especialista DOM & UX
  */
-
 (function () {
-    window.GU = window.GU || {};
-    
-    window.GU.Translator = {
-        dictionary: {},
-        isTranslated: false,
+    'use strict';
 
-        init: async function () {
-            window.GU.log("[GU-Translator] Inicializando módulo de tradução...");
-            await this.loadDictionary();
-            if (Object.keys(this.dictionary).length > 0) {
-                this.translateDOM(document.body);
-                this.observeDOM();
-            }
-        },
+    // Dicionário Oficial PT-BR (Mapeamento Exato)
+    const dictionary = {
+        "Dashboard": "Painel",
+        "Order History": "Histórico de Pedidos",
+        "Statement": "Extrato",
+        "Invoice": "Fatura",
+        "Add Balance": "Adicionar Saldo",
+        "Logout": "Sair",
+        "IMEI Service List": "Lista de Serviços IMEI",
+        "Server Service List": "Lista de Serviços de Servidor",
+        "Home": "Início",
+        "Quick Delivery": "Entrega Rápida",
+        "Results within minutes": "Resultados em minutos",
+        "100% Secure": "100% Seguro",
+        "SSL encrypted platform": "Plataforma criptografada SSL",
+        "24/7 Support": "Suporte 24/7",
+        "Always here to help you": "Sempre aqui para ajudar",
+        "Easy Recharge": "Recarga Fácil",
+        "Binance, Tether, Visa & more": "Binance, Tether, Visa e mais",
+        "Company": "Empresa",
+        "About Us": "Sobre Nós",
+        "Contact Us": "Fale Conosco",
+        "Reseller Panel": "Painel de Revendedor",
+        "Free IMEI Checker": "Consulta IMEI Grátis",
+        "Quick Access": "Acesso Rápido",
+        "Remote Service": "Serviço Remoto",
+        "Service by Group": "Serviços por Grupo",
+        "Best Selling": "Mais Vendidos",
+        "Legal": "Legal",
+        "Privacy Policy": "Política de Privacidade",
+        "Terms of Service": "Termos de Serviço",
+        "Delivery Policy": "Política de Entrega",
+        "Cancellation Policy": "Política de Cancelamento",
+        "Refund & Return Policy": "Política de Reembolso e Devolução",
+        "Get the App": "Baixe o App",
+        "Order, track & get support from your phone.": "Peça, acompanhe e obtenha suporte pelo celular.",
+        "Download on the": "Baixar na",
+        "Get it on": "Disponível no",
+        "App Store": "App Store",
+        "Google Play": "Google Play",
+        "Search": "Pesquisar",
+        "Status": "Status",
+        "Price": "Preço",
+        "Action": "Ação",
+        "Submit": "Enviar",
+        "Cancel": "Cancelar",
+        "Success": "Sucesso",
+        "Error": "Erro",
+        "Pending": "Pendente",
+        "Processing": "Processando",
+        "Completed": "Concluído",
+        "Rejected": "Rejeitado",
+        "Instant": "Instantâneo",
+        "Miniutes": "Minutos",
+        "days": "dias",
+        "Hours": "Horas",
+        "New User": "Novo Usuário",
+        "Existing User": "Usuário Existente",
+        "No Refund": "Sem Reembolso",
+        "Wrong Carrier No Refund": "Operadora Incorreta Sem Reembolso",
+        "Clean IMEI": "IMEI Limpo"
+    };
 
-        loadDictionary: async function () {
-            try {
-                const response = await fetch(`${window.GU.baseURL}/data/pt-br.json?v=${window.GU.version}`);
-                this.dictionary = await response.json();
-                window.GU.log("[GU-Translator] Dicionário PT-BR carregado com sucesso.");
-            } catch (error) {
-                window.GU.log("[GU-Translator] Erro ao carregar dicionário JSON: " + error, "error");
-            }
-        },
+    class GUTranslator {
+        constructor(dict) {
+            this.dict = dict;
+            this.init();
+        }
 
-        translateText: function (text) {
-            const trimmed = text.trim();
-            if (!trimmed) return text;
-            
-            // Se houver correspondência exata no dicionário
-            if (this.dictionary[trimmed]) {
-                return text.replace(trimmed, this.dictionary[trimmed]);
-            }
-            return text;
-        },
+        // Normaliza o texto removendo excesso de espaços e quebras invisíveis
+        cleanText(text) {
+            return text ? text.replace(/\s+/g, ' ').trim() : '';
+        }
 
-        translateDOM: function (rootNode) {
-            const walker = document.createTreeWalker(
-                rootNode,
-                NodeFilter.SHOW_TEXT,
-                {
-                    acceptNode: function (node) {
-                        // Ignorar tags onde tradução é proibida
-                        const parent = node.parentNode;
-                        if (!parent) return NodeFilter.FILTER_REJECT;
-                        
-                        const tagName = parent.tagName ? parent.tagName.toLowerCase() : '';
-                        if (['script', 'style', 'code', 'pre', 'textarea'].includes(tagName)) {
-                            return NodeFilter.FILTER_REJECT;
-                        }
-                        
-                        // Ignorar elementos marcados com data-no-translate
-                        if (parent.closest && parent.closest('[data-no-translate]')) {
-                            return NodeFilter.FILTER_REJECT;
-                        }
+        translateNode(node) {
+            // Varre apenas nós de texto para não quebrar a árvore de elementos HTML
+            const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, null, false);
+            let textNode;
 
-                        // Ignorar nós que são apenas espaços vazios
-                        if (!node.nodeValue.trim()) {
-                            return NodeFilter.FILTER_SKIP;
-                        }
+            while (textNode = walker.nextNode()) {
+                let originalText = textNode.nodeValue;
+                let trimmed = this.cleanText(originalText);
 
-                        return NodeFilter.FILTER_ACCEPT;
-                    }
+                if (this.dict[trimmed]) {
+                    // Preserva espaçamentos originais das pontas se houverem
+                    const leadingSpace = originalText.match(/^\s*/)[0];
+                    const trailingSpace = originalText.match(/\s*$/)[0];
+                    textNode.nodeValue = leadingSpace + this.dict[trimmed] + trailingSpace;
                 }
-            );
-
-            let node;
-            while (node = walker.nextNode()) {
-                const original = node.nodeValue;
-                const translated = this.translateText(original);
-                if (original !== translated) {
-                    node.nodeValue = translated;
-                }
             }
 
-            // Traduzir atributos comuns (placeholder, title, aria-label)
-            const elements = rootNode.querySelectorAll('[placeholder], [title], [aria-label]');
-            elements.forEach(el => {
-                ['placeholder', 'title', 'aria-label'].forEach(attr => {
+            // Traduz também atributos comuns como placeholder, title e alt
+            const elementsWithAttributes = node.querySelectorAll ? node.querySelectorAll('[placeholder], [title], [alt]') : [];
+            elementsWithAttributes.forEach(el => {
+                ['placeholder', 'title', 'alt'].forEach(attr => {
                     const val = el.getAttribute(attr);
-                    if (val && this.dictionary[val.trim()]) {
-                        el.setAttribute(attr, this.dictionary[val.trim()]);
+                    if (val) {
+                        const cleanedVal = this.cleanText(val);
+                        if (this.dict[cleanedVal]) {
+                            el.setAttribute(attr, this.dict[cleanedVal]);
+                        }
                     }
                 });
             });
-        },
+        }
 
-        // Observer seguro para conteúdos carregados via AJAX no painel Laravel
-        observeDOM: function () {
-            let timeout = null;
+        run() {
+            this.translateNode(document.body);
+        }
+
+        init() {
+            // Executa assim que o DOM estiver pronto
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => this.run());
+            } else {
+                this.run();
+            }
+
+            // MutationObserver: Monitora inserções dinâmicas de conteúdo via AJAX / API / JS
             const observer = new MutationObserver((mutations) => {
-                // Debounce para evitar processamento excessivo de CPU
-                if (timeout) clearTimeout(timeout);
-                timeout = setTimeout(() => {
-                    mutations.forEach(mutation => {
-                        mutation.addedNodes.forEach(node => {
-                            if (node.nodeType === Node.ELEMENT_NODE) {
-                                this.translateDOM(node);
-                            }
-                        });
-                    });
-                }, 300);
+                let shouldTranslate = false;
+                for (let mutation of mutations) {
+                    if (mutation.addedNodes.length > 0) {
+                        shouldTranslate = true;
+                        break;
+                    }
+                }
+                if (shouldTranslate) {
+                    // Debounce leve para otimizar performance do DOM
+                    clearTimeout(this.debounceTimer);
+                    this.debounceTimer = setTimeout(() => this.run(), 50);
+                }
             });
 
             observer.observe(document.body, {
                 childList: true,
                 subtree: true
             });
-            
-            window.GU.log("[GU-Translator] MutationObserver ativo para conteúdo AJAX.");
-        }
-    };
 
-    // Auto-executar se ativado na flag
-    if (window.GU.flags && window.GU.flags.translator) {
-        window.GU.Translator.init();
+            console.info("[GU-Translator] Motor de i18n ativo e escutando mutações do DOM com sucesso.");
+        }
     }
+
+    // Inicialização global segura
+    window.GUTranslatorInstance = new GUTranslator(dictionary);
 })();
