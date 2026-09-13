@@ -1,12 +1,13 @@
 /**
- * General Unlocking - Enterprise i18n Engine (v7.0)
- * Arquiteto: Sênior Full-Stack / Especialista DOM & UX (Blindagem contra loops)
+ * General Unlocking - Enterprise i18n Engine (v8.0)
+ * Arquiteto: Sênior Full-Stack / Especialista DOM & UX (Dicionário Expandido)
  */
 (function () {
     'use strict';
 
-    // 1. Dicionário de Termos Estáticos Exatos (Menus, Títulos, Links)
+    // 1. Dicionário de Termos Estáticos Exatos (Incluindo os novos termos solicitados)
     const exactDictionary = {
+        // Painel e Navegação
         "dashboard": "Painel",
         "order history": "Histórico de Pedidos",
         "statement": "Extrato",
@@ -28,13 +29,17 @@
         "add funds": "Adicionar Fundos",
         "settings": "Configurações",
         "profile": "Perfil",
+        
+        // Listas e Busca
         "imei service list": "Lista de Serviços IMEI",
         "server service list": "Lista de Serviços de Servidor",
+        "server service": "Serviço de Servidor",
+        "search service": "Pesquisar Serviço",
+        "search service": "Pesquisar Serviço",
         "remote service": "Serviço Remoto",
         "service by group": "Serviços por Grupo",
         "best selling": "Mais Vendidos",
         "search": "Pesquisar",
-        "search service": "Pesquisar Serviço",
         "status": "Status",
         "price": "Preço",
         "action": "Ação",
@@ -50,18 +55,47 @@
         "id": "ID",
         "time": "Prazo",
         "average time": "Tempo Médio",
+        "customer": "Cliente",
+
+        // Configurações de Conta, Senha e Segurança
+        "current password": "Senha Atual",
+        "new password": "Nova Senha",
+        "password strength": "Força da Senha",
+        "enter a password": "Digite uma senha",
+        "at least 8 characters": "Pelo menos 8 caracteres",
+        "one lowercase letter": "Uma letra minúscula",
+        "one uppercase letter": "Uma letra maiúscula",
+        "one special character": "Um caractere especial",
+        "logout if ip changed": "Sair se o IP mudar",
+        "enable 2fa - eamil otp": "Ativar 2FA - OTP por E-mail",
+        "enable 2fa - email otp": "Ativar 2FA - OTP por E-mail",
+        "enable 2fa - mobile app": "Ativar 2FA - Aplicativo Móvel",
+        "security": "Segurança",
+        "api acess": "Acesso à API",
+        "api access": "Acesso à API",
+
+        // Detalhes de Pedidos e Chamados (Tickets)
+        "order id:": "ID DO PEDIDO:",
+        "amount": "Valor",
+        "success": "Sucesso",
+        "sucesso": "Sucesso",
+        "timeline": "Linha do Tempo",
+        "submitted": "Enviado",
+        "replied": "Respondido",
+        "processing": "Processando",
+        "reply": "Responder",
+        "copy": "Copiar",
+        "error": "Erro",
+        "pending": "Pendente",
+        "completed": "Concluído",
+        "rejected": "Rejeitado",
+
+        // Painel Financeiro e Métricas
         "available balance": "Saldo Disponível",
         "locked balance": "Saldo Bloqueado",
         "total receipts": "Total de Recebimentos",
         "waiting action": "Aguardando Ação",
         "in process": "Em Processamento",
-        "sucesso": "Sucesso",
-        "success": "Sucesso",
-        "error": "Erro",
-        "pending": "Pendente",
-        "processing": "Processando",
-        "completed": "Concluído",
-        "rejected": "Rejeitado",
         "total orders placed": "Total de Pedidos Realizados",
         "order": "Pedido",
         "orders": "Pedidos",
@@ -70,6 +104,8 @@
         "balance deposit": "Depósito de Saldo",
         "paid": "Pago",
         "debit": "Débito",
+
+        // Rodapé e Marketing
         "quick delivery": "Entrega Rápida",
         "results within minutes": "Resultados em minutos",
         "100% secure": "100% Seguro",
@@ -92,7 +128,7 @@
         "google play": "Google Play"
     };
 
-    // 2. Dicionário de Substituição por Expressões Regulares Seguras (Com bordas de palavras \b)
+    // 2. Dicionário de Substituição por Expressões Regulares Seguras
     const keywordDictionary = [
         { regex: /\bActivation\b/gi, replacement: "Ativação" },
         { regex: /\bRenewal\b/gi, replacement: "Renovação" },
@@ -107,10 +143,8 @@
         { regex: /\bMinutes\b/gi, replacement: "Minutos" },
         { regex: /\bHours\b/gi, replacement: "Horas" },
         { regex: /\bDays\b/gi, replacement: "Dias" },
-        { regex: /\bMonths?\b/gi, replacement: "Mê(se)s".replace(/[\(\)]/g, '') }, // Tratamento limpo
         { regex: /\bMonth\b/gi, replacement: "Mês" },
         { regex: /\bMonths\b/gi, replacement: "Meses" },
-        { regex: /\bYears?\b/gi, replacement: "Ano(s)".replace(/[\(\)]/g, '') },
         { regex: /\bYear\b/gi, replacement: "Ano" },
         { regex: /\bYears\b/gi, replacement: "Anos" },
         { regex: /\bInstantâneo\b/gi, replacement: "Instantâneo" },
@@ -124,9 +158,7 @@
         { regex: /\bMust be Registration After Order\b/gi, replacement: "Deve ser registrado após o pedido" },
         { regex: /\bBefore order, must be login\b/gi, replacement: "Antes do pedido, deve fazer login" },
         { regex: /\bNo Refund any issue\b/gi, replacement: "Sem reembolso para qualquer problema" },
-        { regex: /\bNo Refund\b/gi, replacement: "Sem Reembolso" },
-        { regex: /\bactivation for\b/gi, replacement: "ativação para" },
-        { regex: /\bfor\b/gi, replacement: "para" }
+        { regex: /\bNo Refund\b/gi, replacement: "Sem Reembolso" }
     ];
 
     class GUTranslator {
@@ -143,7 +175,6 @@
             let originalText = textNode.nodeValue;
             if (!originalText || originalText.trim().length === 0) return;
 
-            // TRAVA DE SEGURANÇA: Se o nó já foi marcado como traduzido, ignora para evitar loop
             if (textNode.parentNode && textNode.parentNode.getAttribute('data-gu-translated') === 'true') {
                 return;
             }
@@ -151,7 +182,6 @@
             let trimmed = this.cleanText(originalText);
             let lowerTrimmed = trimmed.toLowerCase();
 
-            // 1. Correspondência Exata
             if (exactDictionary[lowerTrimmed]) {
                 const leadingSpace = originalText.match(/^\s*/)[0];
                 const trailingSpace = originalText.match(/\s*$/)[0];
@@ -160,12 +190,10 @@
                 return;
             }
 
-            // 2. Substituição por Palavras-Chave (Protegida contra repetição)
             let modifiedText = originalText;
             let hasChanged = false;
 
             keywordDictionary.forEach(item => {
-                // Aplica apenas se a palavra alvo existir no texto e ainda não tiver sido traduzida
                 if (item.regex.test(modifiedText)) {
                     modifiedText = modifiedText.replace(item.regex, item.replacement);
                     hasChanged = true;
@@ -173,7 +201,6 @@
             });
 
             if (hasChanged && modifiedText !== originalText) {
-                // Evita duplicações acidentais caso o regex rode de novo
                 modifiedText = modifiedText.replace(/Instantâneoâneo+/g, 'Instantâneo');
                 modifiedText = modifiedText.replace(/Minutosnutos+/g, 'Minutos');
                 
@@ -211,11 +238,10 @@
                 this.run();
             }
 
-            // Execuções pontuais iniciais sem loop agressivo
             setTimeout(() => this.run(), 500);
             setTimeout(() => this.run(), 1500);
 
-            console.info("[GU-Translator v7.0] Motor blindado contra loops ativado com sucesso.");
+            console.info("[GU-Translator v8.0] Dicionário de Segurança e Configurações integrado.");
         }
     }
 
