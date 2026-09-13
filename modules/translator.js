@@ -1,12 +1,12 @@
 /**
- * General Unlocking - Enterprise i18n Engine (v2.0)
+ * General Unlocking - Enterprise i18n Engine (v3.0)
  * Arquiteto: Sênior Full-Stack / Especialista DOM & UX
  */
 (function () {
     'use strict';
 
-    // Dicionário Oficial PT-BR (Mapeamento Exato)
-    const dictionary = {
+    // Dicionário Expandido e Normalizado (Chaves em lowercase para match infalível)
+    const rawDictionary = {
         "Dashboard": "Painel",
         "Order History": "Histórico de Pedidos",
         "Statement": "Extrato",
@@ -58,6 +58,7 @@
         "Completed": "Concluído",
         "Rejected": "Rejeitado",
         "Instant": "Instantâneo",
+        "Minutes": "Minutos",
         "Miniutes": "Minutos",
         "days": "dias",
         "Hours": "Horas",
@@ -65,49 +66,92 @@
         "Existing User": "Usuário Existente",
         "No Refund": "Sem Reembolso",
         "Wrong Carrier No Refund": "Operadora Incorreta Sem Reembolso",
-        "Clean IMEI": "IMEI Limpo"
+        "Clean IMEI": "IMEI Limpo",
+        // Adicionando variações comuns extras encontradas em painéis GSM padrão
+        "Place Order": "Fazer Pedido",
+        "View All": "Ver Todos",
+        "Total": "Total",
+        "Quantity": "Quantidade",
+        "Service": "Serviço",
+        "Description": "Descrição",
+        "Type": "Tipo",
+        "API": "API",
+        "Tools": "Ferramentas"
     };
 
+    // Indexa o dicionário em lowercase para permitir busca case-insensitive perfeita
+    const dictionary = {};
+    for (const key in rawDictionary) {
+        dictionary[key.toLowerCase().trim()] = rawDictionary[key];
+    }
+
     class GUTranslator {
-        constructor(dict) {
-            this.dict = dict;
+        constructor() {
             this.init();
         }
 
-        // Normaliza o texto removendo excesso de espaços e quebras invisíveis
         cleanText(text) {
             return text ? text.replace(/\s+/g, ' ').trim() : '';
         }
 
         translateNode(node) {
-            // Varre apenas nós de texto para não quebrar a árvore de elementos HTML
-            const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, null, false);
-            let textNode;
+            if (!node || node.nodeType === Node.COMMENT_NODE) return;
 
+            // 1. Traduz nós de texto
+            const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, {
+                acceptNode: (n) => {
+                    // Evita traduzir scripts, estilos ou campos de texto editáveis ativos
+                    const parent = n.parentNode;
+                    if (parent && ['SCRIPT', 'STYLE', 'TEXTAREA'].includes(parent.tagName)) {
+                        return NodeFilter.FILTER_REJECT;
+                    }
+                    if (parent && parent.isContentEditable) {
+                        return NodeFilter.FILTER_REJECT;
+                    }
+                    return NodeFilter.FILTER_ACCEPT;
+                }
+            }, false);
+
+            let textNode;
             while (textNode = walker.nextNode()) {
                 let originalText = textNode.nodeValue;
                 let trimmed = this.cleanText(originalText);
+                let lowerTrimmed = trimmed.toLowerCase();
 
-                if (this.dict[trimmed]) {
-                    // Preserva espaçamentos originais das pontas se houverem
+                if (dictionary[lowerTrimmed]) {
                     const leadingSpace = originalText.match(/^\s*/)[0];
                     const trailingSpace = originalText.match(/\s*$/)[0];
-                    textNode.nodeValue = leadingSpace + this.dict[trimmed] + trailingSpace;
+                    
+                    let translated = dictionary[lowerTrimmed];
+                    
+                    // Preserva a capitalização original se a palavra original estiver em Title Case ou ALL CAPS (opcional, mas seguro manter a tradução padrão mapeada)
+                    textNode.nodeValue = leadingSpace + translated + trailingSpace;
                 }
             }
 
-            // Traduz também atributos comuns como placeholder, title e alt
-            const elementsWithAttributes = node.querySelectorAll ? node.querySelectorAll('[placeholder], [title], [alt]') : [];
-            elementsWithAttributes.forEach(el => {
+            // 2. Traduz atributos interativos e informativos
+            const elements = node.querySelectorAll ? node.querySelectorAll('[placeholder], [title], [alt], [value]') : [];
+            elements.forEach(el => {
                 ['placeholder', 'title', 'alt'].forEach(attr => {
                     const val = el.getAttribute(attr);
                     if (val) {
-                        const cleanedVal = this.cleanText(val);
-                        if (this.dict[cleanedVal]) {
-                            el.setAttribute(attr, this.dict[cleanedVal]);
+                        const cleaned = this.cleanText(val).toLowerCase();
+                        if (dictionary[cleaned]) {
+                            el.setAttribute(attr, dictionary[cleaned]);
                         }
                     }
                 });
+                
+                // Para inputs do tipo botão ou submit que usam o atributo value
+                if (el.tagName === 'INPUT' && ['submit', 'button', 'reset'].includes(el.type)) {
+                    const val = el.value;
+                    if (val) {
+                        const cleaned = this.cleanText(val).toLowerCase();
+                        if (dictionary[cleaned]) {
+                            el.value = dictionary[cleaned];
+                        }
+                    }
+                }
             });
         }
 
@@ -116,26 +160,35 @@
         }
 
         init() {
-            // Executa assim que o DOM estiver pronto
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', () => this.run());
             } else {
                 this.run();
             }
 
-            // MutationObserver: Monitora inserções dinâmicas de conteúdo via AJAX / API / JS
+            // Executa múltiplas vezes nos primeiros segundos para capturar renderizações pesadas de SDKs de painel
+            setTimeout(() => this.run(), 300);
+            setTimeout(() => this.run(), 1000);
+            setTimeout(() => this.run(), 2500);
+
+            // MutationObserver inteligente para AJAX e Single Page Apps (SPA)
             const observer = new MutationObserver((mutations) => {
                 let shouldTranslate = false;
                 for (let mutation of mutations) {
                     if (mutation.addedNodes.length > 0) {
-                        shouldTranslate = true;
-                        break;
+                        for (let node of mutation.addedNodes) {
+                            if (node.nodeType === Node.ELEMENT_NODE) {
+                                shouldTranslate = true;
+                                break;
+                            }
+                        }
                     }
+                    if (shouldTranslate) break;
                 }
+
                 if (shouldTranslate) {
-                    // Debounce leve para otimizar performance do DOM
                     clearTimeout(this.debounceTimer);
-                    this.debounceTimer = setTimeout(() => this.run(), 50);
+                    this.debounceTimer = setTimeout(() => this.run(), 100);
                 }
             });
 
@@ -144,10 +197,9 @@
                 subtree: true
             });
 
-            console.info("[GU-Translator] Motor de i18n ativo e escutando mutações do DOM com sucesso.");
+            console.info("[GU-Translator v3.0] Motor de i18n blindado ativado com sucesso.");
         }
     }
 
-    // Inicialização global segura
-    window.GUTranslatorInstance = new GUTranslator(dictionary);
+    window.GUTranslatorInstance = new GUTranslator();
 })();
