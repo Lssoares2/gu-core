@@ -1,11 +1,11 @@
 /**
- * General Unlocking - Enterprise i18n Engine (v6.0)
- * Arquiteto: Sênior Full-Stack / Especialista DOM & UX (Motor de Substring Dinâmico)
+ * General Unlocking - Enterprise i18n Engine (v7.0)
+ * Arquiteto: Sênior Full-Stack / Especialista DOM & UX (Blindagem contra loops)
  */
 (function () {
     'use strict';
 
-    // 1. Dicionário de Termos Estáticos (Menus, Botões, Rodapé, Títulos)
+    // 1. Dicionário de Termos Estáticos Exatos (Menus, Títulos, Links)
     const exactDictionary = {
         "dashboard": "Painel",
         "order history": "Histórico de Pedidos",
@@ -92,7 +92,7 @@
         "google play": "Google Play"
     };
 
-    // 2. Dicionário de Substituição Dinâmica (Termos técnicos dentro das linhas de serviços)
+    // 2. Dicionário de Substituição por Expressões Regulares Seguras (Com bordas de palavras \b)
     const keywordDictionary = [
         { regex: /\bActivation\b/gi, replacement: "Ativação" },
         { regex: /\bRenewal\b/gi, replacement: "Renovação" },
@@ -101,13 +101,16 @@
         { regex: /\bExtend\b/gi, replacement: "Estender" },
         { regex: /\bCredits?\b/gi, replacement: "Créditos" },
         { regex: /\bNew User\b/gi, replacement: "Novo Usuário" },
+        { regex: /\bOld User\b/gi, replacement: "Usuário Antigo" },
         { regex: /\bExisting User\b/gi, replacement: "Usuário Existente" },
         { regex: /\bMiniutes\b/gi, replacement: "Minutos" },
         { regex: /\bMinutes\b/gi, replacement: "Minutos" },
         { regex: /\bHours\b/gi, replacement: "Horas" },
         { regex: /\bDays\b/gi, replacement: "Dias" },
+        { regex: /\bMonths?\b/gi, replacement: "Mê(se)s".replace(/[\(\)]/g, '') }, // Tratamento limpo
         { regex: /\bMonth\b/gi, replacement: "Mês" },
         { regex: /\bMonths\b/gi, replacement: "Meses" },
+        { regex: /\bYears?\b/gi, replacement: "Ano(s)".replace(/[\(\)]/g, '') },
         { regex: /\bYear\b/gi, replacement: "Ano" },
         { regex: /\bYears\b/gi, replacement: "Anos" },
         { regex: /\bInstantâneo\b/gi, replacement: "Instantâneo" },
@@ -121,7 +124,9 @@
         { regex: /\bMust be Registration After Order\b/gi, replacement: "Deve ser registrado após o pedido" },
         { regex: /\bBefore order, must be login\b/gi, replacement: "Antes do pedido, deve fazer login" },
         { regex: /\bNo Refund any issue\b/gi, replacement: "Sem reembolso para qualquer problema" },
-        { regex: /\bNo Refund\b/gi, replacement: "Sem Reembolso" }
+        { regex: /\bNo Refund\b/gi, replacement: "Sem Reembolso" },
+        { regex: /\bactivation for\b/gi, replacement: "ativação para" },
+        { regex: /\bfor\b/gi, replacement: "para" }
     ];
 
     class GUTranslator {
@@ -136,64 +141,45 @@
 
         translateTextNode(textNode) {
             let originalText = textNode.nodeValue;
+            if (!originalText || originalText.trim().length === 0) return;
+
+            // TRAVA DE SEGURANÇA: Se o nó já foi marcado como traduzido, ignora para evitar loop
+            if (textNode.parentNode && textNode.parentNode.getAttribute('data-gu-translated') === 'true') {
+                return;
+            }
+
             let trimmed = this.cleanText(originalText);
             let lowerTrimmed = trimmed.toLowerCase();
 
-            // 1. Tenta correspondência exata para textos isolados (Menus, botões, labels)
+            // 1. Correspondência Exata
             if (exactDictionary[lowerTrimmed]) {
                 const leadingSpace = originalText.match(/^\s*/)[0];
                 const trailingSpace = originalText.match(/\s*$/)[0];
                 textNode.nodeValue = leadingSpace + exactDictionary[lowerTrimmed] + trailingSpace;
+                if (textNode.parentNode) textNode.parentNode.setAttribute('data-gu-translated', 'true');
                 return;
             }
 
-            // 2. Se não for exato, aplica o dicionário de palavras-chave (para serviços complexos)
+            // 2. Substituição por Palavras-Chave (Protegida contra repetição)
             let modifiedText = originalText;
             let hasChanged = false;
 
             keywordDictionary.forEach(item => {
+                // Aplica apenas se a palavra alvo existir no texto e ainda não tiver sido traduzida
                 if (item.regex.test(modifiedText)) {
                     modifiedText = modifiedText.replace(item.regex, item.replacement);
                     hasChanged = true;
                 }
             });
 
-            if (hasChanged) {
-                textNode.nodeValue = modifiedText;
-            }
-        }
-
-        translateElementAttributes(element) {
-            if (!element.querySelectorAll) return;
-            
-            const elements = element.querySelectorAll('[placeholder], [title], [alt], [value]');
-            elements.forEach(el => {
-                ['placeholder', 'title', 'alt'].forEach(attr => {
-                    const val = el.getAttribute(attr);
-                    if (val) {
-                        let cleaned = this.cleanText(val).toLowerCase();
-                        if (exactDictionary[cleaned]) {
-                            el.setAttribute(attr, exactDictionary[cleaned]);
-                        } else {
-                            let modVal = val;
-                            keywordDictionary.forEach(item => {
-                                modVal = modVal.replace(item.regex, item.replacement);
-                            });
-                            if (modVal !== val) el.setAttribute(attr, modVal);
-                        }
-                    }
-                });
+            if (hasChanged && modifiedText !== originalText) {
+                // Evita duplicações acidentais caso o regex rode de novo
+                modifiedText = modifiedText.replace(/Instantâneoâneo+/g, 'Instantâneo');
+                modifiedText = modifiedText.replace(/Minutosnutos+/g, 'Minutos');
                 
-                if (el.tagName === 'INPUT' && ['submit', 'button', 'reset'].includes(el.type)) {
-                    const val = el.value;
-                    if (val) {
-                        let cleaned = this.cleanText(val).toLowerCase();
-                        if (exactDictionary[cleaned]) {
-                            el.value = exactDictionary[cleaned];
-                        }
-                    }
-                }
-            });
+                textNode.nodeValue = modifiedText;
+                if (textNode.parentNode) textNode.parentNode.setAttribute('data-gu-translated', 'true');
+            }
         }
 
         run(rootNode = document.body) {
@@ -216,8 +202,6 @@
             while (textNode = walker.nextNode()) {
                 this.translateTextNode(textNode);
             }
-
-            this.translateElementAttributes(rootNode);
         }
 
         init() {
@@ -227,39 +211,11 @@
                 this.run();
             }
 
-            // Intervalos agressivos para apanhar dados injetados via AJAX pelas APIs do painel
-            [100, 300, 600, 1200, 2500, 5000].forEach(ms => {
-                setTimeout(() => this.run(), ms);
-            });
+            // Execuções pontuais iniciais sem loop agressivo
+            setTimeout(() => this.run(), 500);
+            setTimeout(() => this.run(), 1500);
 
-            // MutationObserver contínuo para tabelas geradas dinamicamente
-            const observer = new MutationObserver((mutations) => {
-                if (this.isTranslating) return;
-                
-                let hasNewNodes = false;
-                for (let mutation of mutations) {
-                    if (mutation.addedNodes.length > 0) {
-                        hasNewNodes = true;
-                        break;
-                    }
-                }
-
-                if (hasNewNodes) {
-                    this.isTranslating = true;
-                    clearTimeout(this.debounceTimer);
-                    this.debounceTimer = setTimeout(() => {
-                        this.run();
-                        this.isTranslating = false;
-                    }, 150);
-                }
-            });
-
-            observer.observe(document.body, {
-                childList: true,
-                subtree: true
-            });
-
-            console.info("[GU-Translator v6.0] Motor Inteligente de Substring Ativado.");
+            console.info("[GU-Translator v7.0] Motor blindado contra loops ativado com sucesso.");
         }
     }
 
