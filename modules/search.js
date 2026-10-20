@@ -1,22 +1,31 @@
 
 /**
- * GU Global Search v7.0
+ * GU Global Search v8.0
  * General Unlocking GSM
- * Pesquisa na barra original, sem criar um segundo input.
+ * Usa exclusivamente a barra #globalCyberSearch.
  */
 (function () {
-    if (window.GU_SEARCH_LOADED) {
-        console.warn("[GU-Search] Módulo já carregado.");
-        return;
-    }
-    window.GU_SEARCH_LOADED = true;
+    "use strict";
 
-    const LOG = "[GU-Search]";
-    const SOURCES = [
+    if (window.GU_SEARCH_V8_LOADED) return;
+    window.GU_SEARCH_V8_LOADED = true;
+
+    const PREFIX = "[GU-Search]";
+    const ROUTES = [
         { url: "/imei/service", category: "IMEI" },
         { url: "/server/service", category: "Servidor" },
         { url: "/remote/service", category: "Remoto" }
     ];
+
+    const PRODUCT_PREFIX = "/service/";
+    const MAX_RESULTS = 15;
+
+    let input = null;
+    let panel = null;
+    let products = [];
+    let timer = null;
+    let activeIndex = -1;
+    let requestStarted = false;
 
     const normalize = value => String(value || "")
         .normalize("NFD")
@@ -25,51 +34,13 @@
         .replace(/[^a-z0-9]+/g, " ")
         .trim();
 
-    let input = null;
-    let dropdown = null;
-    let products = [];
-    let selectedIndex = -1;
-    let searchTimer = null;
-    let fetchStarted = false;
-
-    function log(message) {
+    function log(...args) {
         if (window.GU?.flags?.debugMode !== false) {
-            console.log(LOG, message);
+            console.log(PREFIX, ...args);
         }
     }
 
-    function findInput() {
-        // Prioriza explicitamente a barra principal do site.
-        const selectors = [
-            'input[placeholder*="BUSCAR EM TODOS OS SERVIÇOS" i]',
-            'input[placeholder*="UNLOCKTOOL" i]',
-            'input[placeholder*="buscar" i]',
-            'input[placeholder*="pesquisar" i]',
-            'input[type="search"]',
-            'input[name="search"]',
-            'input[id*="search" i],
-            'input[class*="search" i]'
-        ];
-
-        for (const selector of selectors) {
-            const found = [...document.querySelectorAll(selector)].find(el => {
-                if (!(el instanceof HTMLInputElement)) return false;
-                if (el.disabled || el.type === "hidden") return false;
-                if (el.closest("#gu-search-suggestions")) return false;
-
-                const style = getComputedStyle(el);
-                return style.display !== "none" &&
-                    style.visibility !== "hidden" &&
-                    el.getClientRects().length > 0;
-            });
-
-            if (found) return found;
-        }
-
-        return null;
-    }
-
-    function getItemName(item) {
+    function getName(item) {
         if (typeof item === "string") return item;
 
         return [
@@ -80,175 +51,197 @@
             item?.category,
             ...(Array.isArray(item?.aliases) ? item.aliases : []),
             ...(Array.isArray(item?.keywords) ? item.keywords : [])
-        ].filter(Boolean).join(" ");
+        ].filter(Boolean).join(" ").trim();
     }
 
-    function getStaticProducts() {
+    function addProduct(item) {
+        if (!item || !item.name) return;
+
+        const name = String(item.name).replace(/\s+/g, " ").trim();
+        if (name.length < 2) return;
+
+        const url = item.url || "";
+        const key = normalize(name) + "|" + url;
+
+        if (products.some(p => p.key === key)) return;
+
+        products.push({
+            key,
+            name,
+            url,
+            category: item.category || "Serviço",
+            keywords: item.keywords || "",
+            description: item.description || ""
+        });
+    }
+
+    function importStaticCatalog() {
         const catalog = Array.isArray(window.GLOBAL_PRODUCTS_DATABASE)
             ? window.GLOBAL_PRODUCTS_DATABASE
             : Array.isArray(window.GU_SEARCH_CATALOG)
                 ? window.GU_SEARCH_CATALOG
                 : [];
 
-        return catalog.map(item => ({
-            name: getItemName(item),
-            url: typeof item === "object"
+        catalog.forEach(item => {
+            const name = getName(item);
+            if (!name) return;
+
+            let url = typeof item === "object"
                 ? (item.url || item.href || item.link || "")
-                : "",
-            category: item?.category || "Catálogo",
-            source: "static"
-        })).filter(item => item.name);
-    }
+                : "";
 
-    function addProduct(list, item) {
-        if (!item.name || item.name.length < 2) return;
-
-        const key = normalize(item.name) + "|" + item.url;
-        if (list.some(existing =>
-            normalize(existing.name) + "|" + existing.url === key
-        )) return;
-
-        list.push(item);
-    }
-
-    function extractProducts(html, source) {
-        const parsed = new DOMParser().parseFromString(html, "text/html");
-        const found = [];
-
-        // Primeiro tenta identificar os cartões de produto/serviço.
-        const cardSelector = [
-            ".service-card",
-            ".product-card",
-            ".service-item",
-            ".product-item",
-            ".services-item",
-            ".server-item",
-            ".imei-item",
-            "[class*='service-card']",
-            "[class*='product-card']"
-        ].join(",");
-
-        parsed.querySelectorAll(cardSelector).forEach(card => {
-            const link = card.querySelector("a[href]");
-            const heading = card.querySelector(
-                "h1,h2,h3,h4,.title,.name,[class*='title'],[class*='name']"
-            );
-
-            const name = (
-                heading?.textContent ||
-                link?.textContent ||
-                ""
-            ).replace(/\s+/g, " ").trim();
-
-            const href = link?.getAttribute("href") || "";
-
-            if (name && href && !href.startsWith("javascript:")) {
-                found.push({
-                    name,
-                    url: new URL(href, location.origin).href,
-                    category: source.category,
-                    source: "live"
-                });
+            if (url && !/^https?:\/\//i.test(url)) {
+                url = new URL(url, location.origin).href;
             }
-        });
 
-        // Fallback para páginas que usam tabelas/listas em vez de cards.
-        if (found.length === 0) {
-            const main = parsed.querySelector(
-                "main, #main, .main-content, .service-list, .services-list, .container"
-            ) || parsed.body;
-
-            main.querySelectorAll("a[href]").forEach(link => {
-                const name = link.textContent.replace(/\s+/g, " ").trim();
-                const href = link.getAttribute("href") || "";
-                const parent = link.closest("tr, li, .card, .row");
-
-                if (!parent || name.length < 3 || name.length > 180) return;
-                if (!href || href.startsWith("#") ||
-                    href.startsWith("javascript:")) return;
-
-                const text = parent.textContent.replace(/\s+/g, " ").trim();
-
-                // Evita adicionar menus, rodapé e links de autenticação.
-                if (/log in|login|register|create account|privacy policy/i.test(name)) {
-                    return;
-                }
-
-                found.push({
-                    name,
-                    url: new URL(href, location.origin).href,
-                    category: source.category,
-                    source: "live",
-                    description: text
-                });
+            addProduct({
+                name,
+                url,
+                category: item?.category || "Catálogo",
+                keywords: item?.keywords || "",
+                description: item?.description || ""
             });
-        }
-
-        return found;
+        });
     }
 
-    async function loadLiveProducts() {
-        if (fetchStarted) return;
-        fetchStarted = true;
+    function isProductUrl(url) {
+        try {
+            const parsed = new URL(url, location.origin);
+
+            return parsed.origin === location.origin &&
+                parsed.pathname.startsWith(PRODUCT_PREFIX);
+        } catch (_) {
+            return false;
+        }
+    }
+
+    function importLinks(root, category) {
+        root.querySelectorAll("a[href]").forEach(link => {
+            const href = link.href;
+            const name = (link.innerText || link.textContent || "")
+                .replace(/\s+/g, " ")
+                .trim();
+
+            if (!name || !isProductUrl(href)) return;
+
+            addProduct({
+                name,
+                url: href,
+                category
+            });
+        });
+    }
+
+    function importCurrentPage() {
+        importLinks(document, categoryFromPath(location.pathname));
+
+        // Importa também produtos em tabelas e cartões que tenham links
+        // para a rota individual /service/...
+        document.querySelectorAll("tr, .card, [class*='service'], [class*='product']")
+            .forEach(container => {
+                const link = container.querySelector("a[href]");
+                if (!link || !isProductUrl(link.href)) return;
+
+                const name = (link.innerText || link.textContent || "")
+                    .replace(/\s+/g, " ")
+                    .trim();
+
+                if (name) {
+                    addProduct({
+                        name,
+                        url: link.href,
+                        category: categoryFromPath(location.pathname)
+                    });
+                }
+            });
+    }
+
+    function categoryFromPath(path) {
+        if (path.startsWith("/imei/")) return "IMEI";
+        if (path.startsWith("/remote/")) return "Remoto";
+        if (path.startsWith("/server/")) return "Servidor";
+        return "Serviço";
+    }
+
+    function importHTML(html, category) {
+        const doc = new DOMParser().parseFromString(html, "text/html");
+        const before = products.length;
+
+        importLinks(doc, category);
+
+        // Algumas páginas apresentam os produtos em tabelas sem cartões.
+        doc.querySelectorAll("tr, .card, [class*='service'], [class*='product']")
+            .forEach(container => {
+                const link = container.querySelector("a[href]");
+                if (!link) return;
+
+                const href = new URL(link.getAttribute("href"), location.origin).href;
+                if (!isProductUrl(href)) return;
+
+                const name = (link.innerText || link.textContent || "")
+                    .replace(/\s+/g, " ")
+                    .trim();
+
+                if (name) addProduct({ name, url: href, category });
+            });
+
+        return products.length - before;
+    }
+
+    async function loadRoutes() {
+        if (requestStarted) return;
+        requestStarted = true;
 
         const results = await Promise.allSettled(
-            SOURCES.map(async source => {
-                const response = await fetch(source.url, {
+            ROUTES.map(async route => {
+                const response = await fetch(route.url, {
                     credentials: "same-origin",
-                    headers: { "X-Requested-With": "XMLHttpRequest" }
+                    headers: { "Accept": "text/html" }
                 });
 
                 if (!response.ok) {
-                    throw new Error(
-                        source.url + " respondeu HTTP " + response.status
-                    );
+                    throw new Error("HTTP " + response.status);
                 }
 
                 const html = await response.text();
-                return extractProducts(html, source);
+                const count = importHTML(html, route.category);
+
+                log(route.url, "-", count, "produtos identificados");
             })
         );
 
-        const updated = [...products];
-
         results.forEach((result, index) => {
-            if (result.status === "fulfilled") {
-                result.value.forEach(item => addProduct(updated, item));
-                log(
-                    SOURCES[index].url + ": " +
-                    result.value.length + " itens identificados."
-                );
-            } else {
+            if (result.status === "rejected") {
                 console.warn(
-                    LOG + " Não foi possível carregar " +
-                    SOURCES[index].url,
+                    PREFIX,
+                    "Falha ao ler " + ROUTES[index].url,
                     result.reason
                 );
             }
         });
 
-        products = updated;
+        log("Total de itens indexados:", products.length);
 
-        // Atualiza a lista se o usuário ainda estiver pesquisando.
-        if (input?.value.trim()) {
-            renderResults(input.value);
+        if (input && input.value.trim()) {
+            render(input.value);
         }
     }
 
-    function ensureDropdown() {
-        if (dropdown) return;
+    function ensurePanel() {
+        if (panel) return;
 
-        dropdown = document.createElement("div");
-        dropdown.id = "gu-search-suggestions";
+        panel = document.createElement("div");
+        panel.id = "gu-global-search-results";
+        panel.setAttribute("role", "listbox");
 
-        Object.assign(dropdown.style, {
+        Object.assign(panel.style, {
             position: "fixed",
             display: "none",
             zIndex: "2147483647",
-            maxHeight: "360px",
             overflowY: "auto",
+            maxHeight: "380px",
             background: "#101714",
-            color: "#fff",
+            color: "#ffffff",
             border: "1px solid #00ff66",
             borderRadius: "8px",
             boxShadow: "0 8px 28px rgba(0,0,0,.45)",
@@ -256,127 +249,125 @@
             fontSize: "14px"
         });
 
-        document.body.appendChild(dropdown);
+        document.body.appendChild(panel);
     }
 
-    function positionDropdown() {
-        if (!input || !dropdown) return;
+    function positionPanel() {
+        if (!input || !panel) return;
 
         const rect = input.getBoundingClientRect();
 
-        Object.assign(dropdown.style, {
-            left: rect.left + "px",
-            top: rect.bottom + 5 + "px",
-            width: rect.width + "px"
+        Object.assign(panel.style, {
+            left: Math.max(4, rect.left) + "px",
+            top: Math.min(rect.bottom + 5, window.innerHeight - 60) + "px",
+            width: Math.min(rect.width, window.innerWidth - 8) + "px"
         });
     }
 
-    function rankProducts(query) {
-        const normalizedQuery = normalize(query);
-        const terms = normalizedQuery.split(/\s+/).filter(Boolean);
+    function search(query) {
+        const q = normalize(query);
+        if (!q) return [];
 
-        if (!terms.length) return [];
+        const terms = q.split(/\s+/);
 
-        return products.map(item => {
-            const name = normalize(item.name);
-            const description = normalize(item.description || "");
-            const category = normalize(item.category || "");
-            const searchable = name + " " + description + " " + category;
+        return products.map(product => {
+            const name = normalize(product.name);
+            const all = normalize([
+                product.name,
+                product.category,
+                product.keywords,
+                product.description
+            ].join(" "));
 
-            const matched = terms.filter(term =>
-                searchable.includes(term)
-            ).length;
-
+            const matched = terms.filter(term => all.includes(term)).length;
             if (matched !== terms.length) return null;
 
             let score = matched * 10;
 
-            if (name === normalizedQuery) score += 100;
-            if (name.startsWith(normalizedQuery)) score += 50;
-            if (name.includes(normalizedQuery)) score += 25;
-            if (item.source === "live") score += 5;
+            if (name === q) score += 100;
+            if (name.startsWith(q)) score += 50;
+            if (name.includes(q)) score += 25;
 
-            return { ...item, score };
+            return { ...product, score };
         })
         .filter(Boolean)
         .sort((a, b) => b.score - a.score)
-        .slice(0, 12);
+        .slice(0, MAX_RESULTS);
     }
 
-    function renderResults(query) {
-        ensureDropdown();
-        dropdown.replaceChildren();
-        selectedIndex = -1;
+    function render(query) {
+        ensurePanel();
+        panel.replaceChildren();
+        activeIndex = -1;
 
         if (!query.trim()) {
-            dropdown.style.display = "none";
+            panel.style.display = "none";
             return;
         }
 
-        const results = rankProducts(query);
-
-        positionDropdown();
-        dropdown.style.display = "block";
+        const results = search(query);
+        positionPanel();
+        panel.style.display = "block";
 
         if (!results.length) {
             const message = document.createElement("div");
+
             message.textContent = products.length
-                ? "Nenhum produto encontrado no catálogo carregado."
-                : "Carregando catálogo de serviços...";
+                ? "Nenhum produto correspondente encontrado."
+                : "Nenhum produto foi carregado. Verifique o catálogo e as requisições.";
 
             message.style.padding = "14px";
-            message.style.color = "#c8d3cc";
-            dropdown.appendChild(message);
+            panel.appendChild(message);
             return;
         }
 
-        results.forEach((item, index) => {
-            const result = document.createElement("a");
-            result.href = item.url || (
-                item.category === "IMEI" ? "/imei/service" :
-                item.category === "Remoto" ? "/remote/service" :
-                "/server/service"
-            );
+        results.forEach((product, index) => {
+            const item = document.createElement("a");
 
-            Object.assign(result.style, {
+            item.href = product.url || "#";
+            item.setAttribute("role", "option");
+
+            Object.assign(item.style, {
                 display: "block",
                 padding: "11px 14px",
-                color: "#fff",
+                color: "#ffffff",
                 textDecoration: "none",
-                borderBottom: "1px solid #26352b",
-                cursor: "pointer"
+                borderBottom: "1px solid #26352b"
             });
 
-            const title = document.createElement("div");
-            title.textContent = item.name;
-            title.style.fontWeight = "600";
+            const name = document.createElement("div");
+            name.textContent = product.name;
+            name.style.fontWeight = "600";
 
             const category = document.createElement("small");
-            category.textContent = item.category || "Serviço";
+            category.textContent = product.category;
             category.style.color = "#00ff66";
 
-            result.append(title, category);
+            item.append(name, category);
 
-            result.addEventListener("mouseenter", () => {
-                selectedIndex = index;
-                highlightSelection();
+            item.addEventListener("mouseenter", () => {
+                activeIndex = index;
+                highlight();
             });
 
-            result.addEventListener("click", () => {
-                if (item.url) {
-                    window.location.href = item.url;
+            item.addEventListener("click", event => {
+                if (!product.url) {
+                    event.preventDefault();
+                    return;
                 }
+
+                panel.style.display = "none";
             });
 
-            dropdown.appendChild(result);
+            panel.appendChild(item);
         });
     }
 
-    function highlightSelection() {
-        if (!dropdown) return;
+    function highlight() {
+        if (!panel) return;
 
-        [...dropdown.children].forEach((element, index) => {
-            element.style.background = index === selectedIndex
+        [...panel.children].forEach((item, index) => {
+            item.style.background = index === activeIndex
                 ? "#183c27"
                 : "transparent";
         });
@@ -385,94 +376,91 @@
     function connect() {
         if (window.GU?.flags?.globalSearch === false) return false;
 
-        const found = findInput();
-        if (!found) return false;
+        // Usa o ID confirmado pelo Console, sem selecionar #search-input.
+        const found = document.getElementById("globalCyberSearch");
 
-        if (input === found && found.dataset.guSearchConnected === "true") {
-            return true;
-        }
+        if (!(found instanceof HTMLInputElement)) return false;
+
+        if (found.dataset.guSearchV8 === "true") return true;
 
         input = found;
-        input.dataset.guSearchConnected = "true";
+        input.dataset.guSearchV8 = "true";
 
-        ensureDropdown();
+        ensurePanel();
 
         input.addEventListener("input", () => {
-            clearTimeout(searchTimer);
-            searchTimer = setTimeout(() => {
-                renderResults(input.value);
-            }, 120);
+            clearTimeout(timer);
+            timer = setTimeout(() => render(input.value), 100);
         });
 
         input.addEventListener("focus", () => {
-            if (input.value.trim()) renderResults(input.value);
+            if (input.value.trim()) render(input.value);
         });
 
         input.addEventListener("keydown", event => {
-            if (!dropdown || dropdown.style.display === "none") {
-                if (event.key === "Enter" && input.value.trim()) {
-                    renderResults(input.value);
-                }
-                return;
-            }
+            if (!panel || panel.style.display === "none") return;
 
-            const items = [...dropdown.querySelectorAll("a")];
+            const items = [...panel.querySelectorAll("a[href]")];
 
             if (event.key === "ArrowDown" && items.length) {
                 event.preventDefault();
-                selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
-                highlightSelection();
+                activeIndex = Math.min(activeIndex + 1, items.length - 1);
+                highlight();
             } else if (event.key === "ArrowUp" && items.length) {
                 event.preventDefault();
-                selectedIndex = Math.max(selectedIndex - 1, 0);
-                highlightSelection();
+                activeIndex = Math.max(0, activeIndex - 1);
+                highlight();
             } else if (event.key === "Enter" && items.length) {
                 event.preventDefault();
-                const target = items[selectedIndex >= 0 ? selectedIndex : 0];
-                if (target) window.location.href = target.href;
+
+                const chosen = items[activeIndex >= 0 ? activeIndex : 0];
+                if (chosen?.href && chosen.getAttribute("href") !== "#") {
+                    location.href = chosen.href;
+                }
             } else if (event.key === "Escape") {
-                dropdown.style.display = "none";
+                panel.style.display = "none";
             }
         });
 
         document.addEventListener("click", event => {
-            if (!dropdown.contains(event.target) && event.target !== input) {
-                dropdown.style.display = "none";
+            if (event.target !== input && !panel.contains(event.target)) {
+                panel.style.display = "none";
             }
         });
 
-        window.addEventListener("resize", positionDropdown);
-        window.addEventListener("scroll", positionDropdown, true);
+        window.addEventListener("resize", positionPanel);
+        window.addEventListener("scroll", positionPanel, true);
 
-        log("Barra original conectada.");
-        loadLiveProducts();
+        log("Barra #globalCyberSearch conectada.");
 
         return true;
     }
 
     function init() {
-        // Preserva o catálogo estático, se já estiver definido.
-        products = getStaticProducts();
+        importStaticCatalog();
+        importCurrentPage();
 
-        if (connect()) return;
+        if (!connect()) {
+            const observer = new MutationObserver(() => {
+                if (connect()) observer.disconnect();
+            });
 
-        const observer = new MutationObserver(() => {
-            if (connect()) observer.disconnect();
-        });
+            observer.observe(document.documentElement, {
+                childList: true,
+                subtree: true
+            });
+        }
 
-        observer.observe(document.documentElement, {
-            childList: true,
-            subtree: true
-        });
+        loadRoutes();
     }
 
     window.GU = window.GU || {};
     window.GU.Search = {
         init,
+        search,
         normalizeText: normalize,
-        version: "7.0.0",
-        getCatalog: () => products,
-        search: query => rankProducts(query)
+        getCatalog: () => products.slice(),
+        version: "8.0.0"
     };
 
     if (document.readyState === "loading") {
