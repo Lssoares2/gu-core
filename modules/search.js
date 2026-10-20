@@ -1,4 +1,3 @@
-```javascript
 /**
  * GU Global Search v9.0
  * General Unlocking GSM
@@ -656,4 +655,3 @@ function search(query) {
         init();
     }
 })();
-```
