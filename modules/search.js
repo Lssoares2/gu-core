@@ -219,82 +219,39 @@
         });
     }
 
-    function loadRouteInIframe(route) {
-        return new Promise(resolve => {
-            const iframe = document.createElement("iframe");
-            let finished = false;
-
-            // Fora da tela, mas com dimensões para permitir a renderização.
-            Object.assign(iframe.style, {
-                position: "fixed",
-                left: "-20000px",
-                top: "0",
-                width: "1280px",
-                height: "900px",
-                opacity: "0",
-                pointerEvents: "none",
-                border: "0"
-            });
-
-            iframe.setAttribute("aria-hidden", "true");
-            iframe.tabIndex = -1;
-
-            const fallback = setTimeout(() => {
-                finish(new Error("Tempo limite ao carregar " + route.url));
-            }, LOAD_TIMEOUT + 10000);
-
-            function finish(error) {
-                if (finished) return;
-                finished = true;
-
-                clearTimeout(fallback);
-
-                if (iframe.parentNode) iframe.remove();
-
-                if (error) {
-                    resolve({
-                        route,
-                        count: 0,
-                        error
-                    });
-                }
-            }
-
-            iframe.onload = async () => {
-                try {
-                    const doc = iframe.contentDocument;
-
-                    if (!doc) {
-                        finish(new Error("Não foi possível acessar o documento"));
-                        return;
-                    }
-
-                    await waitForProducts(doc);
-
-                    const count = importLinks(doc, route.category);
-
-                    log(route.url, "-", count, "produtos novos");
-
-                    if (!finished) {
-                        finished = true;
-                        clearTimeout(fallback);
-                        iframe.remove();
-
-                        resolve({ route, count });
-                    }
-                } catch (error) {
-                    finish(error);
-                }
-            };
-
-            iframe.onerror = () => {
-                finish(new Error("Falha ao abrir a página"));
-            };
-
-            iframe.src = new URL(route.url, location.origin).href;
-            document.body.appendChild(iframe);
+    
+async function loadRouteInIframe(route) {
+    try {
+        const response = await fetch(route.url, {
+            credentials: "same-origin",
+            cache: "no-cache"
         });
+
+        if (!response.ok) {
+            throw new Error("HTTP " + response.status);
+        }
+
+        const html = await response.text();
+        const doc = new DOMParser().parseFromString(html, "text/html");
+
+        // Importa os links de produtos do HTML recebido.
+        let count = importLinks(doc, route.category);
+
+        // Se a página usa conteúdo carregado por JavaScript,
+        // o HTML inicial pode não conter todos os produtos.
+        log(route.url, "-", count, "produtos encontrados no HTML");
+
+        return { route, count };
+    } catch (error) {
+        console.warn(
+            PREFIX,
+            "Falha ao ler " + route.url,
+            error
+        );
+
+        return { route, count: 0, error };
     }
+}
 
     async function loadRoutes() {
         if (requestStarted) return;
