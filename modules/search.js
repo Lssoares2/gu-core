@@ -254,25 +254,29 @@ async function loadRouteInIframe(route) {
 }
 
     async function loadRoutes() {
-        if (requestStarted) return;
-        requestStarted = true;
+    if (requestStarted) return;
+    requestStarted = true;
 
-        const results = await Promise.all(
-            ROUTES.map(route => 
-function loadRouteInIframe(route) {
-    return new Promise(resolve => {
-        const iframe = document.createElement("iframe");
+    const results = await Promise.all(
+        ROUTES.map(route => loadRouteInIframe(route))
+    );
 
-        Object.assign(iframe.style, {
-            position: "fixed",
-            left: "-20000px",
-            top: "0",
-            width: "1280px",
-            height: "900px",
-            opacity: "0",
-            pointerEvents: "none",
-            border: "0"
-        });
+    results.forEach(result => {
+        if (result.error) {
+            console.warn(
+                PREFIX,
+                "Falha ao ler " + result.route.url,
+                result.error
+            );
+        }
+    });
+
+    log("Total de itens indexados:", products.length);
+
+    if (input && input.value.trim()) {
+        render(input.value);
+    }
+}
 
         iframe.setAttribute("aria-hidden", "true");
         iframe.tabIndex = -1;
