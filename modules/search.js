@@ -1,5 +1,5 @@
 /**
- * GU-Core: Global Search Engine (v4.1 - Acoplado à Barra Superior)
+ * GU-Core: Global Search Engine (v4.2 - Correção de Duplicidade de Dropdown)
  * Arquiteto: Sênior Full-Stack / Especialista DOM & UX
  */
 (function () {
@@ -204,7 +204,7 @@
 
     window.GU.Search = {
         init: function () {
-            window.GU.log("[GU-Search v4.1] Acoplando à barra de pesquisa superior...");
+            window.GU.log("[GU-Search v4.2] Acoplando à barra de pesquisa superior (Anti-duplicidade)...");
             this.bindExistingSearch();
         },
 
@@ -216,11 +216,9 @@
         },
 
         bindExistingSearch: function () {
-            // Localiza o input da barra maior superior pelo placeholder ou classes comuns
             const input = document.querySelector('input[placeholder*="BUSCAR"], input[placeholder*="todos os serviços"], .search-box input, #search-input');
             
             if (!input) {
-                window.GU.log("[GU-Search] Barra superior ainda não renderizada. Tentando novamente...", "warn");
                 setTimeout(() => this.bindExistingSearch(), 800);
                 return;
             }
@@ -230,26 +228,27 @@
                 parent.style.position = 'relative';
             }
 
-            let dropdown = document.getElementById('gu-search-results-dropdown');
-            if (!dropdown) {
-                dropdown = document.createElement('div');
-                dropdown.id = 'gu-search-results-dropdown';
-                dropdown.style.cssText = `
-                    display: none;
-                    position: absolute;
-                    top: 105%;
-                    left: 0;
-                    right: 0;
-                    background: #151824;
-                    border: 1px solid #00ff66;
-                    border-radius: 6px;
-                    max-height: 350px;
-                    overflow-y: auto;
-                    z-index: 99999;
-                    box-shadow: 0 10px 30px rgba(0,0,0,0.9);
-                `;
-                parent.appendChild(dropdown);
-            }
+            // Remove QUALQUER dropdown anterior para evitar duplicidade visual
+            const oldDropdowns = parent.querySelectorAll('#gu-search-results-dropdown');
+            oldDropdowns.forEach(el => el.remove());
+
+            const dropdown = document.createElement('div');
+            dropdown.id = 'gu-search-results-dropdown';
+            dropdown.style.cssText = `
+                display: none;
+                position: absolute;
+                top: 105%;
+                left: 0;
+                right: 0;
+                background: #151824;
+                border: 1px solid #00ff66;
+                border-radius: 6px;
+                max-height: 350px;
+                overflow-y: auto;
+                z-index: 99999;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.9);
+            `;
+            parent.appendChild(dropdown);
 
             input.addEventListener('input', (e) => {
                 const rawQuery = e.target.value.trim();
