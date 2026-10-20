@@ -1,14 +1,13 @@
 /**
- * GU-Core: Global Search Engine (v3.0 - Lista de Ferramentas Limpa)
+ * GU-Core: Global Search Engine (v3.1 - Apenas Nomes / Palavras-Passe)
  * Arquiteto: Sênior Full-Stack / Especialista DOM & UX
  * Tolera erros de digitação, espaços faltantes/extras, hífens e símbolos.
  */
 (function () {
     window.GU = window.GU || {};
 
-    // Base de Dados Estática Limpa com Categorização de Serviços
+    // Base de Dados Estática com os Nomes Limpos dos Produtos (Palavras-Passe)
     const GLOBAL_PRODUCTS_DATABASE = [
-        // 🛠️ Ferramentas, Licenças e Softwares GSM
         "Phoenix Service Tool",
         "UnlockTool",
         "TSM-TOOL Pro",
@@ -35,8 +34,6 @@
         "The Magic Tool Motorola",
         "SamsungTool.us + SST + CellTool.io",
         "Borneo Schematics",
-
-        // 🔄 Aluguéis Temporários de Softwares
         "Android Multitool (Aluguel AMT - 3 Horas)",
         "DFT Pro Tool (Aluguel - 48 Horas)",
         "Kg Killer Tool (Aluguel - 4 Horas)",
@@ -45,8 +42,6 @@
         "UNLOCK TOOL (Aluguel - 6 Horas)",
         "Virtual Box (Aluguel - 30 e 60 Minutos)",
         "Samsung Tool / Cell Tool SST (Aluguel - 60 Minutos)",
-
-        // 🍏 Serviços e Desbloqueios Apple (iPhone / iPad / Mac)
         "FRPFILE / Bypass Passcode & Hello Screen",
         "A12 Passcode (XR/XS/Max)",
         "A12-A13 Hello Screen",
@@ -77,8 +72,6 @@
         "Swisscom Switzerland iPhone Unlock",
         "Vodafone UK iPhone Unlock",
         "3 Hutchison UK iPhone Unlock",
-
-        // 📱 Consultas e Desbloqueios Multimarcas (IMEI / SN)
         "Samsung Check Information & Knox Guard (KG Enrollment Status)",
         "Samsung EUROPE All Model & Carrier (NCK & MCK)",
         "Samsung Full Information + Activation / Country / Sales",
@@ -106,8 +99,6 @@
         "Mexico - Telcel / Movistar Owner Info By IMEI",
         "Bolivia - Tigo Owner Info By IMEI",
         "Peru - Claro / Entel / Movistar Owner Info By IMEI",
-
-        // 🔍 Consultas de Dados Pessoais e Utilitários Diversos
         "Consulta CPF CADSUS / DataSUS",
         "Consulta CPF Completo (BigData)",
         "Consulta E-mail & Senhas",
@@ -121,12 +112,12 @@
 
     window.GU.Search = {
         init: function () {
-            window.GU.log("[GU-Search v3.0] Inicializando busca flexível...");
+            window.GU.log("[GU-Search v3.1] Inicializando busca direta por palavras-passe...");
             this.injectSearchUI();
             this.bindEvents();
         },
 
-        // Remove acentos, hífens, pontuações e espaços para permitir busca tolerante
+        // Normalização leve para busca insensível a acentos, hífens e espaços
         normalizeText: function (str) {
             return str
                 .toLowerCase()
@@ -140,7 +131,7 @@
             const searchHTML = `
                 <div id="gu-global-search-container" style="position: relative; display: inline-block; width: 100%; max-width: 450px; margin: 0 15px;">
                     <div style="position: relative;">
-                        <input type="text" id="gu-global-search-input" placeholder="🔍 Pesquisar em todas as ferramentas e serviços..." style="
+                        <input type="text" id="gu-global-search-input" placeholder="🔍 Pesquisar ferramenta ou serviço..." style="
                             width: 100%;
                             background: #0b0d14 !important;
                             border: 1px solid #00ff66 !important;
@@ -185,70 +176,4 @@
         },
 
         bindEvents: function () {
-            const input = document.getElementById('gu-global-search-input');
-            const dropdown = document.getElementById('gu-search-results-dropdown');
-
-            if (!input || !dropdown) return;
-
-            input.addEventListener('input', (e) => {
-                const rawQuery = e.target.value.trim();
-                const normalizedQuery = this.normalizeText(rawQuery);
-                const queryWords = rawQuery.toLowerCase().split(/\s+/).filter(w => w.length > 0);
-                
-                if (normalizedQuery.length < 2) {
-                    dropdown.style.display = 'none';
-                    dropdown.innerHTML = '';
-                    return;
-                }
-
-                // Match duplo: busca compacta sem símbolos OU presença de todas as palavras digitadas
-                const matches = GLOBAL_PRODUCTS_DATABASE.filter(item => {
-                    const normalizedItem = this.normalizeText(item);
-                    
-                    if (normalizedItem.includes(normalizedQuery)) return true;
-
-                    const normalizedItemLower = item.toLowerCase();
-                    return queryWords.every(word => normalizedItemLower.includes(word));
-                }).slice(0, 15);
-
-                if (matches.length === 0) {
-                    dropdown.innerHTML = `<div style="padding: 12px; color: #94a3b8; text-align: center; font-size: 13px;">Nenhum produto encontrado.</div>`;
-                    dropdown.style.display = 'block';
-                    return;
-                }
-
-                let html = '';
-                matches.forEach(title => {
-                    html += `
-                        <div class="gu-search-result-item" style="
-                            padding: 10px 15px;
-                            border-bottom: 1px solid #262d47;
-                            cursor: pointer;
-                            font-size: 12px;
-                            color: #e2e8f0;
-                            transition: background 0.2s;
-                        " onclick="window.location.href='/server-service-list?search=${encodeURIComponent(title)}'" 
-                          onmouseover="this.style.background='#1e2235'; this.style.color='#00ff66';" 
-                          onmouseout="this.style.background='transparent'; this.style.color='#e2e8f0';">
-                            ⚡ ${title}
-                        </div>
-                    `;
-                });
-
-                dropdown.innerHTML = html;
-                dropdown.style.display = 'block';
-            });
-
-            document.addEventListener('click', (e) => {
-                const container = document.getElementById('gu-global-search-container');
-                if (container && !container.contains(e.target)) {
-                    dropdown.style.display = 'none';
-                }
-            });
-        }
-    };
-
-    if (window.GU.flags && window.GU.flags.globalSearch) {
-        window.GU.Search.init();
-    }
-})();
+            const input = document.
