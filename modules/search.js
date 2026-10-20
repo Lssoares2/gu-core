@@ -220,40 +220,137 @@
     }
 
     
-async function loadRouteInIframe(route) {
-    try {
-        const response = await fetch(route.url, {
-            credentials: "same-origin",
-            cache: "no-cache"
+
+    function loadRouteInIframe(route) {
+        return new Promise(resolve => {
+            const iframe = document.createElement("iframe");
+
+            Object.assign(iframe.style, {
+                position: "fixed",
+                left: "-20000px",
+                top: "0",
+                width: "1280px",
+                height: "900px",
+                opacity: "0",
+                pointerEvents: "none",
+                border: "0"
+            });
+
+            iframe.setAttribute("aria-hidden", "true");
+            iframe.tabIndex = -1;
+
+            let finished = false;
+            let previousCount = -1;
+            let stableChecks = 0;
+
+            const started = Date.now();
+            const maxWait = 30000;
+
+            function finish(result) {
+                if (finished) return;
+
+                finished = true;
+                clearInterval(interval);
+                clearTimeout(timeout);
+                iframe.remove();
+                resolve(result);
+            }
+
+            function checkProducts() {
+                if (finished) return;
+
+                try {
+                    const doc = iframe.contentDocument;
+
+                    if (doc && doc.documentElement) {
+                        const count = doc.querySelectorAll(
+                            'a[href*="/service/"]'
+                        ).length;
+
+                        if (count > 0 && count === previousCount) {
+                            stableChecks++;
+                        } else {
+                            stableChecks = 0;
+                        }
+
+                        previousCount = count;
+
+                        if (count > 0 && stableChecks >= 4) {
+                            const imported = importLinks(
+                                doc,
+                                route.category
+                            );
+
+                            log(
+                                route.url,
+                                "-",
+                                imported,
+                                "produtos importados"
+                            );
+
+                            finish({
+                                route,
+                                count: imported
+                            });
+                        }
+                    }
+                } catch (error) {
+                    console.warn(
+                        PREFIX,
+                        "Erro ao ler " + route.url,
+                        error
+                    );
+                }
+            }
+
+            const interval = setInterval(checkProducts, 500);
+
+            const timeout = setTimeout(() => {
+                finish({
+                    route,
+                    count: 0,
+                    error: new Error(
+                        "Tempo limite; links encontrados: " +
+                        previousCount
+                    )
+                });
+            }, maxWait);
+
+            iframe.onload = checkProducts;
+            iframe.src = new URL(
+                route.url,
+                location.origin
+            ).href;
+
+            document.body.appendChild(iframe);
         });
-
-        if (!response.ok) {
-            throw new Error("HTTP " + response.status);
-        }
-
-        const html = await response.text();
-        const doc = new DOMParser().parseFromString(html, "text/html");
-
-        // Importa os links de produtos do HTML recebido.
-        let count = importLinks(doc, route.category);
-
-        // Se a página usa conteúdo carregado por JavaScript,
-        // o HTML inicial pode não conter todos os produtos.
-        log(route.url, "-", count, "produtos encontrados no HTML");
-
-        return { route, count };
-    } catch (error) {
-        console.warn(
-            PREFIX,
-            "Falha ao ler " + route.url,
-            error
-        );
-
-        return { route, count: 0, error };
     }
-}
 
     async function loadRoutes() {
+        if (requestStarted) return;
+        requestStarted = true;
+
+        const results = await Promise.all(
+            ROUTES.map(route => loadRouteInIframe(route))
+        );
+
+        results.forEach(result => {
+            if (result.error) {
+                console.warn(
+                    PREFIX,
+                    "Falha ao ler " + result.route.url,
+                    result.error
+                );
+            }
+        });
+
+        log("Total de itens indexados:", products.length);
+
+        if (input && input.value.trim()) {
+            render(input.value);
+        }
+    }
+
     if (requestStarted) return;
     requestStarted = true;
 
@@ -274,97 +371,7 @@ async function loadRouteInIframe(route) {
     log("Total de itens indexados:", products.length);
 
     if (input && input.value.trim()) {
-        render(input.value);
-    }
-}
-
-        iframe.setAttribute("aria-hidden", "true");
-        iframe.tabIndex = -1;
-
-        let finished = false;
-        let previousCount = -1;
-        let stableChecks = 0;
-
-        const started = Date.now();
-        const MAX_WAIT = 30000;
-
-        function finish(result) {
-            if (finished) return;
-
-            finished = true;
-            iframe.remove();
-            resolve(result);
-        }
-
-        function checkProducts() {
-            if (finished) return;
-
-            try {
-                const doc = iframe.contentDocument;
-
-                if (doc && doc.documentElement) {
-                    const count = doc.querySelectorAll(
-                        'a[href*="/service/"]'
-                    ).length;
-
-                    if (count > 0 && count === previousCount) {
-                        stableChecks++;
-                    } else {
-                        stableChecks = 0;
-                    }
-
-                    previousCount = count;
-
-                    if (count > 0 && stableChecks >= 4) {
-                        const imported = importLinks(doc, route.category);
-
-                        log(
-                            route.url,
-                            "-",
-                            imported,
-                            "produtos importados"
-                        );
-
-                        finish({ route, count: imported });
-                        return;
-                    }
-                }
-            } catch (error) {
-                console.warn(
-                    PREFIX,
-                    "Erro ao ler " + route.url,
-                    error
-                );
-            }
-
-            if (Date.now() - started >= MAX_WAIT) {
-                finish({
-                    route,
-                    count: 0,
-                    error: new Error(
-                        "Tempo limite; links encontrados: " +
-                        previousCount
-                    )
-                });
-                return;
-            }
-
-            setTimeout(checkProducts, 500);
-        }
-
-        document.body.appendChild(iframe);
-        iframe.src = new URL(route.url, location.origin).href;
-
-        setTimeout(checkProducts, 500);
-    });
-}
-
-
-        log("Total de itens indexados:", products.length);
-
-        if (input && input.value.trim()) {
-            render(input.value);
-        }
+    
     }
 
     function ensurePanel() {
