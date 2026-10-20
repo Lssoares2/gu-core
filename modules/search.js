@@ -363,36 +363,126 @@
         });
     }
 
-    function search(query) {
-        const q = normalize(query);
-        if (!q) return [];
+    
+function search(query) {
+  const normalize = (value) =>
+    String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
 
-        const terms = q.split(/\s+/);
+  const aliases = {
+    "phoenix": ["phoenix service tool"],
+    "unlocktool": ["unlock tool"],
+    "tsm": ["tsm tool", "tsm tool pro"],
+    "amt": ["android multi tool"],
+    "tfm": ["tfm pro tool"],
+    "awt": ["android win tool"],
+    "eft": ["eft pro", "eft dongle"],
+    "z3x": ["z3x samstool"],
+    "dft": ["dft pro tool"],
+    "octoplus": ["octoplus samsung tool"],
+    "sst": ["samsung service tool"],
+    "frpfile": ["frpfile finder"],
+    "borneo": ["borneo schematics"],
+    "mdm": ["mdm fix tool", "apple mdm checker"],
+    "fmi": ["find my iphone", "apple activation lock"],
+    "icloud": ["apple activation lock", "icloud checker"],
+    "xiaomi": ["micloud", "xiaomi find"],
+    "imei": ["imei checker", "imei sn checker"],
+    "blacklist": ["gsma blacklist checker"],
+    "virtualbox": ["virtual box"],
+    "anydesk": ["any desk"],
+    "motorola": ["motorola unlock codes", "motorola info"],
+    "samsung": ["samsung info", "samsung imei", "kg bypass"],
+    "chimera": ["chimera tool"],
+    "hydra": ["hydra tool"],
+    "pandora": ["pandora tool"],
+    "kg": ["kg bypass", "kgfixtool"],
+    "kgfix": ["kgfixtool"],
+    "grifftool": ["griffin unlocker"],
+    "celltool": ["celltool io"],
+    "apple": ["iphone", "icloud", "fmi", "mdm"],
+    "iphone": ["ios passcode", "hello screen", "carrier sim lock"],
+    "macbook": ["macbook icloud checker"],
+    "huawei": ["huawei info"],
+    "oneplus": ["oneplus info"],
+    "pixel": ["google pixel info"],
+    "zte": ["zte info"],
+    "honor": ["honor imei sn checker"]
+  };
 
-        return products.map(product => {
-            const name = normalize(product.name);
-            const all = normalize([
-                product.name,
-                product.category,
-                product.keywords,
-                product.description
-            ].join(" "));
+  const raw = normalize(query);
+  if (!raw) return [];
 
-            const matched = terms.filter(term => all.includes(term)).length;
-            if (matched !== terms.length) return null;
+  const terms = raw.split(/\s+/).filter(Boolean);
+  const expanded = new Set(terms);
 
-            let score = matched * 10;
-
-            if (name === q) score += 100;
-            if (name.startsWith(q)) score += 50;
-            if (name.includes(q)) score += 25;
-
-            return { ...product, score };
-        })
-            .filter(Boolean)
-            .sort((a, b) => b.score - a.score)
-            .slice(0, MAX_RESULTS);
+  for (const term of terms) {
+    for (const alias of aliases[term] || []) {
+      expanded.add(normalize(alias));
     }
+  }
+
+  const catalog = Array.isArray(products) ? products : [];
+
+  return catalog
+    .map((product) => {
+      const name = normalize(product.name);
+      const category = normalize(product.category);
+      const keywords = normalize(
+        Array.isArray(product.keywords)
+          ? product.keywords.join(" ")
+          : product.keywords
+      );
+      const description = normalize(product.description);
+      const haystack = `${name} ${category} ${keywords} ${description}`;
+
+      let score = 0;
+      let matched = 0;
+
+      for (const term of expanded) {
+        const words = term.split(/\s+/).filter(Boolean);
+
+        const found = words.every((word) =>
+          haystack.split(/\s+/).some((item) =>
+            item === word ||
+            item.startsWith(word) ||
+            word.startsWith(item)
+          )
+        );
+
+        if (found) {
+          matched++;
+          if (name === term) score += 100;
+          else if (name.startsWith(term)) score += 50;
+          else if (name.includes(term)) score += 30;
+          else score += 10;
+        }
+      }
+
+      const originalMatches = terms.filter((term) =>
+        haystack.split(/\s+/).some((word) =>
+          word === term ||
+          word.startsWith(term) ||
+          term.startsWith(word)
+        )
+      ).length;
+
+      if (originalMatches === 0 && matched === 0) return null;
+
+      score += originalMatches * 20;
+
+      return { product, score };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 15)
+    .map((item) => item.product);
+}
+
 
     function render(query) {
         ensurePanel();
