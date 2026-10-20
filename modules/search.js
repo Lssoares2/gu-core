@@ -258,18 +258,103 @@ async function loadRouteInIframe(route) {
         requestStarted = true;
 
         const results = await Promise.all(
-            ROUTES.map(route => loadRouteInIframe(route))
-        );
+            ROUTES.map(route => 
+function loadRouteInIframe(route) {
+    return new Promise(resolve => {
+        const iframe = document.createElement("iframe");
 
-        results.forEach(result => {
-            if (result.error) {
+        Object.assign(iframe.style, {
+            position: "fixed",
+            left: "-20000px",
+            top: "0",
+            width: "1280px",
+            height: "900px",
+            opacity: "0",
+            pointerEvents: "none",
+            border: "0"
+        });
+
+        iframe.setAttribute("aria-hidden", "true");
+        iframe.tabIndex = -1;
+
+        let finished = false;
+        let previousCount = -1;
+        let stableChecks = 0;
+
+        const started = Date.now();
+        const MAX_WAIT = 30000;
+
+        function finish(result) {
+            if (finished) return;
+
+            finished = true;
+            iframe.remove();
+            resolve(result);
+        }
+
+        function checkProducts() {
+            if (finished) return;
+
+            try {
+                const doc = iframe.contentDocument;
+
+                if (doc && doc.documentElement) {
+                    const count = doc.querySelectorAll(
+                        'a[href*="/service/"]'
+                    ).length;
+
+                    if (count > 0 && count === previousCount) {
+                        stableChecks++;
+                    } else {
+                        stableChecks = 0;
+                    }
+
+                    previousCount = count;
+
+                    if (count > 0 && stableChecks >= 4) {
+                        const imported = importLinks(doc, route.category);
+
+                        log(
+                            route.url,
+                            "-",
+                            imported,
+                            "produtos importados"
+                        );
+
+                        finish({ route, count: imported });
+                        return;
+                    }
+                }
+            } catch (error) {
                 console.warn(
                     PREFIX,
-                    "Falha ao ler " + result.route.url,
-                    result.error
+                    "Erro ao ler " + route.url,
+                    error
                 );
             }
-        });
+
+            if (Date.now() - started >= MAX_WAIT) {
+                finish({
+                    route,
+                    count: 0,
+                    error: new Error(
+                        "Tempo limite; links encontrados: " +
+                        previousCount
+                    )
+                });
+                return;
+            }
+
+            setTimeout(checkProducts, 500);
+        }
+
+        document.body.appendChild(iframe);
+        iframe.src = new URL(route.url, location.origin).href;
+
+        setTimeout(checkProducts, 500);
+    });
+}
+
 
         log("Total de itens indexados:", products.length);
 
