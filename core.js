@@ -1,56 +1,54 @@
-
 /**
- * GU-Core: Frontend Extension Layer
- * Version: 1.0.0
- * Architecture: Modular (GitHub Pages -> Laravel Header Coder)
+ * GU-Core — General Unlocking GSM
+ * Carregamento modular sem duplicar a pesquisa do painel.
  */
-
 (function () {
-    // 1. PREVENÇÃO DE DUPLICIDADE
     if (window.GU_CORE_LOADED) {
-        console.warn(
-            "[GU-Core] Tentativa de carregamento duplicado interceptada."
-        );
+        console.warn("[GU-Core] O core já foi carregado.");
         return;
     }
 
     window.GU_CORE_LOADED = true;
 
-    // 2. NAMESPACE E CONFIGURAÇÃO
     window.GU = {
-        version: "1.0.1",
+        version: "1.0.2",
         baseURL: "https://lssoares2.github.io/gu-core",
 
-        // FEATURE FLAGS
         flags: {
             debugMode: true,
             themeNeon: true,
             translator: true,
-            globalSearch: true, // PESQUISA GLOBAL ATIVADA
+            globalSearch: true,
             uiFixes: false
         },
 
-        // 3. SISTEMA DE LOGS
-        log: function (msg, type = "info") {
+        log: function (message, type = "info") {
             if (!this.flags.debugMode) return;
 
             const prefix = "[GU-Core]";
 
-            if (type === "warn") {
-                console.warn(prefix, msg);
-            } else if (type === "error") {
-                console.error(prefix, msg);
+            if (type === "error") {
+                console.error(prefix, message);
+            } else if (type === "warn") {
+                console.warn(prefix, message);
             } else {
-                console.log(prefix, msg);
+                console.log(prefix, message);
             }
         },
 
-        // 4. CARREGADOR DE CSS
         loadCSS: function (path) {
-            const link = document.createElement("link");
+            const url = `${this.baseURL}/${path}?v=${this.version}`;
 
+            // Evita inserir o mesmo CSS mais de uma vez.
+            if ([...document.querySelectorAll('link[rel="stylesheet"]')]
+                .some(link => link.href.startsWith(`${this.baseURL}/${path}`))) {
+                this.log(`CSS já carregado: ${path}`);
+                return;
+            }
+
+            const link = document.createElement("link");
             link.rel = "stylesheet";
-            link.href = `${this.baseURL}/${path}?v=${this.version}`;
+            link.href = url;
 
             link.onerror = () => {
                 this.log(`Falha ao carregar CSS: ${path}`, "error");
@@ -60,12 +58,19 @@
             this.log(`CSS solicitado: ${path}`);
         },
 
-        // 5. CARREGADOR DE JAVASCRIPT
         loadJS: function (path) {
-            const script = document.createElement("script");
+            const url = `${this.baseURL}/${path}`;
 
-            script.src = `${this.baseURL}/${path}?v=${this.version}`;
-            script.defer = true;
+            // Evita carregar novamente um módulo já inserido.
+            if ([...document.scripts].some(script =>
+                script.src.startsWith(url)
+            )) {
+                this.log(`Módulo já solicitado: ${path}`);
+                return;
+            }
+
+            const script = document.createElement("script");
+            script.src = `${url}?v=${this.version}`;
 
             script.onload = () => {
                 this.log(`Módulo carregado: ${path}`);
@@ -76,12 +81,10 @@
             };
 
             document.head.appendChild(script);
-            this.log(`Carregamento solicitado: ${path}`);
         },
 
-        // 6. INICIALIZAÇÃO DOS MÓDULOS
         init: function () {
-            this.log("Iniciando carregamento de módulos...");
+            this.log("Iniciando módulos...");
 
             if (this.flags.themeNeon) {
                 this.loadCSS("assets/theme-neon.css");
@@ -93,18 +96,15 @@
 
             if (this.flags.globalSearch) {
                 this.loadJS("modules/search.js");
-                this.log("Pesquisa global ativada.");
             }
 
             if (this.flags.uiFixes) {
                 this.loadJS("modules/ui-fixes.js");
             }
 
-            this.log("Sistema pronto e aguardando.");
+            this.log("Inicialização concluída.");
         }
     };
 
-    // 7. INICIAR GU-CORE
     window.GU.init();
-
 })();
