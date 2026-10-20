@@ -1,8 +1,11 @@
+
 /**
  * GU-Core — General Unlocking GSM
  * Carregamento modular sem duplicar a pesquisa do painel.
  */
 (function () {
+    "use strict";
+
     if (window.GU_CORE_LOADED) {
         console.warn("[GU-Core] O core já foi carregado.");
         return;
@@ -10,9 +13,12 @@
 
     window.GU_CORE_LOADED = true;
 
+    const VERSION = "1.0.3";
+    const BASE_URL = "https://lssoares2.github.io/gu-core";
+
     window.GU = {
-        version: "1.0.2",
-        baseURL: "https://lssoares2.github.io/gu-core",
+        version: VERSION,
+        baseURL: BASE_URL,
 
         flags: {
             debugMode: true,
@@ -39,10 +45,22 @@
         loadCSS: function (path) {
             const url = `${this.baseURL}/${path}?v=${this.version}`;
 
-            // Evita inserir o mesmo CSS mais de uma vez.
-            if ([...document.querySelectorAll('link[rel="stylesheet"]')]
-                .some(link => link.href.startsWith(`${this.baseURL}/${path}`))) {
-                this.log(`CSS já carregado: ${path}`);
+            const alreadyLoaded = [...document.querySelectorAll(
+                'link[rel="stylesheet"]'
+            )].some(link => {
+                try {
+                    const loadedURL = new URL(link.href);
+                    const targetURL = new URL(url);
+
+                    return loadedURL.origin === targetURL.origin &&
+                        loadedURL.pathname === targetURL.pathname;
+                } catch (_) {
+                    return false;
+                }
+            });
+
+            if (alreadyLoaded) {
+                this.log(`CSS já solicitado: ${path}`);
                 return;
             }
 
@@ -50,27 +68,44 @@
             link.rel = "stylesheet";
             link.href = url;
 
+            link.onload = () => {
+                this.log(`CSS carregado: ${path}`);
+            };
+
             link.onerror = () => {
                 this.log(`Falha ao carregar CSS: ${path}`, "error");
             };
 
             document.head.appendChild(link);
-            this.log(`CSS solicitado: ${path}`);
         },
 
         loadJS: function (path) {
             const url = `${this.baseURL}/${path}`;
 
-            // Evita carregar novamente um módulo já inserido.
-            if ([...document.scripts].some(script =>
-                script.src.startsWith(url)
-            )) {
+            const alreadyLoaded = [...document.scripts].some(script => {
+                if (!script.src) return false;
+
+                try {
+                    const loadedURL = new URL(script.src);
+                    const targetURL = new URL(url);
+
+                    return loadedURL.origin === targetURL.origin &&
+                        loadedURL.pathname === targetURL.pathname;
+                } catch (_) {
+                    return false;
+                }
+            });
+
+            if (alreadyLoaded) {
                 this.log(`Módulo já solicitado: ${path}`);
                 return;
             }
 
             const script = document.createElement("script");
             script.src = `${url}?v=${this.version}`;
+            script.dataset.guModule = path;
+            script.dataset.guVersion = this.version;
+            script.async = false;
 
             script.onload = () => {
                 this.log(`Módulo carregado: ${path}`);
@@ -84,7 +119,7 @@
         },
 
         init: function () {
-            this.log("Iniciando módulos...");
+            this.log(`Iniciando módulos — versão ${this.version}...`);
 
             if (this.flags.themeNeon) {
                 this.loadCSS("assets/theme-neon.css");
